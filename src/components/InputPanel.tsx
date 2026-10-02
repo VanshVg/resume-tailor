@@ -36,7 +36,7 @@ export function InputPanel(props: InputPanelProps) {
           saveWarning={props.resumeSaveWarning}
           onClear={props.onClearResume}
         />
-        <div className="md:pt-9">
+        <div className="md:pt-11">
           <TextField
             label="Job description"
             hint="Paste the full posting, including requirements."
@@ -48,7 +48,7 @@ export function InputPanel(props: InputPanelProps) {
         </div>
       </div>
       <FieldMessage id="input-size-status" status={props.sizeStatus} />
-      <p className="mt-2 text-xs text-slate-600">
+      <p className="mt-2 text-xs text-fg-muted">
         Your resume and the job description are sent to Anthropic for analysis. Don&apos;t include
         anything you wouldn&apos;t want sent to an AI provider (you may want to remove your phone
         number and address).

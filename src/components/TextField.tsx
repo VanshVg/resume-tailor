@@ -25,20 +25,17 @@ export function TextField({
   const id = useId();
   return (
     <div className="flex flex-col">
+      <label htmlFor={id} className={labelHidden ? "sr-only" : "text-fg text-sm font-medium"}>
+        {label}
+      </label>
       <div className="flex items-baseline justify-between gap-2">
-        <label
-          htmlFor={id}
-          className={labelHidden ? "sr-only" : "text-sm font-medium text-slate-900"}
-        >
-          {label}
-        </label>
-        <span className="ml-auto text-xs text-slate-500">
+        <p id={`${id}-hint`} className="text-fg-muted text-xs">
+          {hint}
+        </p>
+        <span className="text-fg-subtle text-xs">
           {value.length.toLocaleString("en-US")} characters
         </span>
       </div>
-      <p id={`${id}-hint`} className="text-xs text-slate-600">
-        {hint}
-      </p>
       <textarea
         id={id}
         value={value}

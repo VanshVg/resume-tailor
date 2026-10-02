@@ -15,8 +15,8 @@ export function ErrorBanner({ kind, partialText, spend, onRetry, onDismiss }: Er
   const { title, message, retryable } = describeError(kind);
   const isCancel = kind === "cancelled";
   const tone = isCancel
-    ? "border-slate-300 bg-slate-50 text-slate-900"
-    : "border-red-300 bg-red-50 text-red-950";
+    ? "border-line-strong bg-sunken text-fg"
+    : "border-danger-line bg-danger-bg text-danger-fg";
 
   return (
     <div role={isCancel ? "status" : "alert"} className={`rounded-lg border p-4 ${tone}`}>
@@ -32,7 +32,7 @@ export function ErrorBanner({ kind, partialText, spend, onRetry, onDismiss }: Er
           <summary className="cursor-pointer font-medium">
             Show what was received ({partialText.length.toLocaleString("en-US")} characters)
           </summary>
-          <pre className="mt-2 max-h-64 overflow-auto rounded bg-white/70 p-2 text-xs whitespace-pre-wrap">
+          <pre className="mt-2 max-h-64 overflow-auto rounded bg-surface/70 p-2 text-xs whitespace-pre-wrap">
             {partialText}
           </pre>
         </details>

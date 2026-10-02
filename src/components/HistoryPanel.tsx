@@ -15,9 +15,9 @@ interface HistoryPanelProps {
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
 function scoreColor(score: number): string {
-  if (score >= 75) return "bg-emerald-100 text-emerald-800";
-  if (score >= 50) return "bg-amber-100 text-amber-900";
-  return "bg-red-100 text-red-800";
+  if (score >= 75) return "bg-good-soft text-good-soft-fg";
+  if (score >= 50) return "bg-mid-soft text-mid-soft-fg";
+  return "bg-bad-soft text-bad-soft-fg";
 }
 
 export function HistoryPanel({
@@ -46,40 +46,40 @@ export function HistoryPanel({
   return (
     <section
       aria-labelledby="history-heading"
-      className="rounded-xl border border-slate-200 bg-white p-5"
+      className="rounded-xl border border-line bg-surface p-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="history-heading" className="text-lg font-semibold text-slate-900">
+        <h2 id="history-heading" className="text-lg font-semibold text-fg">
           Saved analyses{" "}
           {enabled && (
-            <span className="text-sm font-normal text-slate-500">({entries.length})</span>
+            <span className="text-sm font-normal text-fg-subtle">({entries.length})</span>
           )}
         </h2>
-        <label className="flex items-center gap-2 text-sm text-slate-800">
+        <label className="flex items-center gap-2 text-sm text-fg">
           <input
             type="checkbox"
             checked={enabled}
             onChange={(e) => {
               toggle(e.target.checked);
             }}
-            className="size-4 accent-indigo-600"
+            className="size-4 accent-accent"
           />
           Save analyses on this device
         </label>
       </div>
 
       {!enabled ? (
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-fg-muted">
           Off. Turn it on to keep your results (match score, suggestions and the job description,
           but never your resume) in this browser so you can compare jobs.
         </p>
       ) : entries.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-fg-muted">
           Nothing saved yet. Your next analysis will appear here.
         </p>
       ) : (
         <>
-          <ul className="mt-3 divide-y divide-slate-100">
+          <ul className="mt-3 divide-y divide-line-subtle">
             {entries.map((entry) => {
               const { jobTitle, company, matchScore } = entry.analysis;
               const label = company ? `${jobTitle} at ${company}` : jobTitle;
@@ -92,8 +92,8 @@ export function HistoryPanel({
                     {matchScore}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-900">{label}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="truncate text-sm font-medium text-fg">{label}</p>
+                    <p className="text-xs text-fg-subtle">
                       {dateFormat.format(new Date(entry.createdAt))} ·{" "}
                       {getModelLabel(entry.modelId)} · {formatCost(entry.spend.cost)}
                     </p>
@@ -106,7 +106,7 @@ export function HistoryPanel({
                       }}
                       aria-current={viewingId === entry.id ? "true" : undefined}
                       aria-label={`View analysis for ${label}`}
-                      className="btn-secondary px-2 py-1 text-xs aria-[current]:border-indigo-600 aria-[current]:text-indigo-700"
+                      className="btn-secondary px-2 py-1 text-xs aria-[current]:border-accent aria-[current]:text-accent-fg"
                     >
                       {viewingId === entry.id ? "Viewing" : "View"}
                     </button>
@@ -136,7 +136,7 @@ export function HistoryPanel({
           </button>
         </>
       )}
-      {warning && <p className="mt-2 text-sm text-amber-800">{warning}</p>}
+      {warning && <p className="mt-2 text-sm text-warn-text">{warning}</p>}
     </section>
   );
 }

@@ -26,7 +26,7 @@ export function KeyInput({
 
   return (
     <div>
-      <label htmlFor={`${id}-key`} className="block text-sm font-medium text-slate-900">
+      <label htmlFor={`${id}-key`} className="block text-sm font-medium text-fg">
         Anthropic API key
       </label>
       <div className="mt-1 flex flex-wrap gap-2">
@@ -58,7 +58,7 @@ export function KeyInput({
         </button>
       </div>
       <FieldMessage id={`${id}-status`} status={status} />
-      <p id={`${id}-note`} className="mt-1 text-sm text-slate-600">
+      <p id={`${id}-note`} className="mt-1 text-sm text-fg-muted">
         Your key stays in your browser and is sent only to Anthropic. It is never stored on our
         servers. Get one at{" "}
         <a
@@ -71,24 +71,24 @@ export function KeyInput({
         </a>
         .
       </p>
-      <label className="mt-2 flex items-center gap-2 text-sm text-slate-800">
+      <label className="mt-2 flex items-center gap-2 text-sm text-fg">
         <input
           type="checkbox"
           checked={remember}
           onChange={(e) => {
             onRememberChange(e.target.checked);
           }}
-          className="size-4 accent-indigo-600"
+          className="size-4 accent-accent"
         />
         Remember my key on this device
       </label>
       {remember && !storageFailed && (
-        <p className="mt-1 text-xs text-slate-600">
+        <p className="mt-1 text-xs text-fg-muted">
           Saved in this browser&apos;s local storage. Untick or press Clear key to remove it.
         </p>
       )}
       {storageFailed && (
-        <p className="mt-1 text-sm text-amber-800">
+        <p className="mt-1 text-sm text-warn-text">
           This browser blocked local storage, so the key will be forgotten when you close the tab.
         </p>
       )}

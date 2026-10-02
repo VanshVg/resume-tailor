@@ -48,4 +48,6 @@ export const STORAGE_KEYS = {
   resumePdf: "resume-tailor:resume-pdf",
   historyEnabled: "resume-tailor:history-enabled",
   history: "resume-tailor:history",
+  /** Also read by public/theme.js. */
+  theme: "resume-tailor:theme",
 } as const;

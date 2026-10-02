@@ -19,13 +19,13 @@ export function ProgressPanel({
       : `Writing suggestions… ${receivedChars.toLocaleString("en-US")} characters received`;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-info-line bg-info-bg p-4">
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"
-          className="size-5 animate-spin rounded-full border-2 border-indigo-300 border-t-indigo-700 motion-reduce:animate-none"
+          className="size-5 animate-spin rounded-full border-2 border-info-line border-t-accent motion-reduce:animate-none"
         />
-        <div role="status" className="text-sm text-indigo-950">
+        <div role="status" className="text-sm text-info-fg">
           <p>{message}</p>
           {attempt > 1 && (
             <p className="text-xs">

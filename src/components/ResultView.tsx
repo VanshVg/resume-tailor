@@ -13,16 +13,15 @@ interface ResultViewProps {
 }
 
 function scoreBand(score: number): { label: string; color: string; bar: string } {
-  if (score >= 75)
-    return { label: "Strong match", color: "text-emerald-700", bar: "bg-emerald-600" };
-  if (score >= 50) return { label: "Partial match", color: "text-amber-700", bar: "bg-amber-500" };
-  return { label: "Weak match", color: "text-red-700", bar: "bg-red-600" };
+  if (score >= 75) return { label: "Strong match", color: "text-good-text", bar: "bg-emerald-600" };
+  if (score >= 50) return { label: "Partial match", color: "text-mid-text", bar: "bg-amber-500" };
+  return { label: "Weak match", color: "text-danger-text", bar: "bg-red-600" };
 }
 
 const IMPORTANCE_STYLES: Record<Importance, string> = {
-  high: "bg-red-100 text-red-800",
-  medium: "bg-amber-100 text-amber-900",
-  low: "bg-slate-100 text-slate-700",
+  high: "bg-bad-soft text-bad-soft-fg",
+  medium: "bg-mid-soft text-mid-soft-fg",
+  low: "bg-sunken text-fg-muted",
 };
 
 function Section({
@@ -36,17 +35,17 @@ function Section({
 }) {
   return (
     <section className="mt-8">
-      <h3 className="text-lg font-semibold text-slate-900">
-        {title} <span className="text-sm font-normal text-slate-500">({count})</span>
+      <h3 className="text-lg font-semibold text-fg">
+        {title} <span className="text-sm font-normal text-fg-subtle">({count})</span>
       </h3>
-      {count === 0 ? <p className="mt-2 text-sm text-slate-500">None.</p> : children}
+      {count === 0 ? <p className="mt-2 text-sm text-fg-subtle">None.</p> : children}
     </section>
   );
 }
 
 function TextList({ items }: { readonly items: readonly string[] }) {
   return (
-    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
+    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-fg">
       {items.map((item, i) => (
         <li key={i}>{item}</li>
       ))}
@@ -59,15 +58,15 @@ export function ResultView({ analysis, modelId, spend }: ResultViewProps) {
 
   return (
     <article aria-label="Analysis results">
-      <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5 sm:flex-row sm:items-center">
         <div className="shrink-0 text-center sm:w-36">
           <p className={`text-5xl font-bold ${band.color}`}>
             {analysis.matchScore}
-            <span className="text-xl font-medium text-slate-500">/100</span>
+            <span className="text-xl font-medium text-fg-subtle">/100</span>
           </p>
           <p className={`text-sm font-medium ${band.color}`}>{band.label}</p>
           <div
-            className="mt-2 h-2 rounded-full bg-slate-200"
+            className="mt-2 h-2 rounded-full bg-line"
             role="meter"
             aria-label="Match score"
             aria-valuemin={0}
@@ -81,11 +80,11 @@ export function ResultView({ analysis, modelId, spend }: ResultViewProps) {
           </div>
         </div>
         <div>
-          <p className="text-sm font-medium text-slate-500">
+          <p className="text-sm font-medium text-fg-subtle">
             {analysis.jobTitle}
             {analysis.company && <> at {analysis.company}</>}
           </p>
-          <p className="mt-1 text-slate-800">{analysis.summary}</p>
+          <p className="mt-1 text-fg">{analysis.summary}</p>
           <div className="mt-2">
             <SpendNote spend={spend} prefix={`Analyzed by ${getModelLabel(modelId)} for`} />
           </div>
@@ -99,16 +98,16 @@ export function ResultView({ analysis, modelId, spend }: ResultViewProps) {
       <Section title="Missing keywords" count={analysis.missingKeywords.length}>
         <ul className="mt-2 space-y-2">
           {analysis.missingKeywords.map((item, i) => (
-            <li key={i} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+            <li key={i} className="rounded-lg border border-line bg-surface p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium text-slate-900">{item.keyword}</span>
+                <span className="font-medium text-fg">{item.keyword}</span>
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-medium ${IMPORTANCE_STYLES[item.importance]}`}
                 >
                   {item.importance} importance
                 </span>
               </div>
-              <p className="mt-1 text-slate-700">{item.suggestion}</p>
+              <p className="mt-1 text-fg-muted">{item.suggestion}</p>
             </li>
           ))}
         </ul>
@@ -125,16 +124,16 @@ export function ResultView({ analysis, modelId, spend }: ResultViewProps) {
       <Section title="Section advice" count={analysis.sectionAdvice.length}>
         <dl className="mt-2 space-y-2 text-sm">
           {analysis.sectionAdvice.map((item, i) => (
-            <div key={i} className="rounded-lg border border-slate-200 bg-white p-3">
-              <dt className="font-medium text-slate-900">{item.section}</dt>
-              <dd className="mt-1 text-slate-700">{item.advice}</dd>
+            <div key={i} className="rounded-lg border border-line bg-surface p-3">
+              <dt className="font-medium text-fg">{item.section}</dt>
+              <dd className="mt-1 text-fg-muted">{item.advice}</dd>
             </div>
           ))}
         </dl>
       </Section>
 
       <Section title="Gaps" count={analysis.gaps.length}>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-fg-muted">
           Requirements your resume doesn&apos;t show. Only add them if you genuinely have the
           experience.
         </p>

@@ -7,23 +7,21 @@ interface BulletRewriteProps {
 
 export function BulletRewrite({ rewrite }: BulletRewriteProps) {
   return (
-    <li className="rounded-lg border border-slate-200 bg-white p-3">
+    <li className="rounded-lg border border-line bg-surface p-3">
       <div className="grid gap-3 md:grid-cols-2">
         <div>
-          <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Original</p>
-          <p className="mt-1 text-sm whitespace-pre-wrap text-slate-700">{rewrite.original}</p>
+          <p className="text-xs font-semibold tracking-wide text-fg-subtle uppercase">Original</p>
+          <p className="mt-1 text-sm whitespace-pre-wrap text-fg-muted">{rewrite.original}</p>
         </div>
         <div>
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold tracking-wide text-emerald-700 uppercase">
-              Improved
-            </p>
+            <p className="text-xs font-semibold tracking-wide text-good-text uppercase">Improved</p>
             <CopyButton text={rewrite.improved} label="Copy improved bullet" />
           </div>
-          <p className="mt-1 text-sm whitespace-pre-wrap text-slate-900">{rewrite.improved}</p>
+          <p className="mt-1 text-sm whitespace-pre-wrap text-fg">{rewrite.improved}</p>
         </div>
       </div>
-      <p className="mt-2 border-t border-slate-100 pt-2 text-sm text-slate-600">
+      <p className="mt-2 border-t border-line-subtle pt-2 text-sm text-fg-muted">
         <span className="font-medium">Why: </span>
         {rewrite.reason}
       </p>

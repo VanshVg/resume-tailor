@@ -6,11 +6,13 @@ import { KeyInput } from "./components/KeyInput";
 import { ModelSelect } from "./components/ModelSelect";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { ResultView } from "./components/ResultView";
+import { ThemeSwitch } from "./components/ThemeSwitch";
 import { DEFAULT_MODEL_ID, getModel, type ModelId } from "./config/models";
 import { useAnalysis, type AnalysisSuccess } from "./hooks/useAnalysis";
 import { useApiKey } from "./hooks/useApiKey";
 import { useHistory } from "./hooks/useHistory";
 import { toResumeInput, useResume } from "./hooks/useResume";
+import { useTheme } from "./hooks/useTheme";
 import { anthropicProvider } from "./services/anthropic";
 import type { AnalysisProvider } from "./services/provider";
 import { newEntryId, type HistoryEntry } from "./utils/history";
@@ -22,6 +24,7 @@ interface AppProps {
 }
 
 export function App({ provider = anthropicProvider }: AppProps) {
+  const [theme, setTheme] = useTheme();
   const key = useApiKey();
   const [modelId, setModelId] = useState<ModelId>(DEFAULT_MODEL_ID);
   const resume = useResume();
@@ -75,10 +78,13 @@ export function App({ provider = anthropicProvider }: AppProps) {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-line bg-surface">
         <div className="mx-auto max-w-5xl px-4 py-5">
-          <h1 className="text-2xl font-bold text-slate-900">Resume Tailor</h1>
-          <p className="mt-1 text-slate-600">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-fg text-2xl font-bold">Resume Tailor</h1>
+            <ThemeSwitch value={theme} onChange={setTheme} />
+          </div>
+          <p className="mt-1 text-fg-muted">
             Paste your resume and a job description to get specific, honest suggestions for
             tailoring your resume to the role. Nothing is invented: only rewording, reordering and
             reframing of what&apos;s already there.
@@ -95,7 +101,7 @@ export function App({ provider = anthropicProvider }: AppProps) {
             analyze();
           }}
         >
-          <section className="grid grid-cols-1 gap-6 rounded-xl border border-slate-200 bg-white p-5 md:grid-cols-2 [&>*]:min-w-0">
+          <section className="grid grid-cols-1 gap-6 rounded-xl border border-line bg-surface p-5 md:grid-cols-2 [&>*]:min-w-0">
             <KeyInput
               apiKey={key.apiKey}
               onApiKeyChange={key.setApiKey}
@@ -108,7 +114,7 @@ export function App({ provider = anthropicProvider }: AppProps) {
             <ModelSelect value={modelId} onChange={setModelId} />
           </section>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-5">
+          <section className="rounded-xl border border-line bg-surface p-5">
             <InputPanel
               resume={resume.draft}
               onResumeModeChange={resume.setMode}
@@ -136,7 +142,7 @@ export function App({ provider = anthropicProvider }: AppProps) {
               Analyze
             </button>
             {check.blockers.length > 0 && !busy && (
-              <ul id={blockersId} className="text-sm text-slate-600">
+              <ul id={blockersId} className="text-sm text-fg-muted">
                 {check.blockers.map((b) => (
                   <li key={b}>{b}</li>
                 ))}
@@ -150,14 +156,14 @@ export function App({ provider = anthropicProvider }: AppProps) {
             id="results-heading"
             ref={resultsHeadingRef}
             tabIndex={-1}
-            className="text-lg font-semibold text-slate-900 focus:outline-none"
+            className="text-lg font-semibold text-fg focus:outline-none"
           >
             {viewing ? "Saved analysis" : "Results"}
           </h2>
 
           {viewing ? (
             <>
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-950">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-info-line bg-info-bg p-3 text-sm text-info-fg">
                 <p>
                   Viewing a saved analysis from{" "}
                   {new Date(viewing.createdAt).toLocaleString(undefined, {
@@ -206,7 +212,7 @@ export function App({ provider = anthropicProvider }: AppProps) {
               </div>
 
               {state.status === "idle" && (
-                <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                <p className="rounded-xl border border-dashed border-line-strong p-6 text-center text-sm text-fg-subtle">
                   Your match score, keyword gaps and suggested bullet rewrites will appear here.
                 </p>
               )}
@@ -232,7 +238,7 @@ export function App({ provider = anthropicProvider }: AppProps) {
         />
       </main>
 
-      <footer className="mx-auto max-w-5xl px-4 pb-8 text-xs text-slate-500">
+      <footer className="mx-auto max-w-5xl px-4 pb-8 text-xs text-fg-subtle">
         No analytics, no tracking, no server. Your resume and key go only to Anthropic&apos;s API,
         directly from your browser.
       </footer>
