@@ -69,7 +69,7 @@ If the SDK causes problems in the browser, fall back to plain `fetch` against `h
 - Copy-to-clipboard button on each suggested rewrite.
 - Deployed publicly, with a README.
 
-### Phase 2: Nice to have (in progress; I chose to start it right after the Phase 1 deploy, before real-key testing)
+### Phase 2: Nice to have (built 2026-10-02, before real-key testing at my request; not yet deployed)
 
 - PDF resume upload (send to Claude as a base64 `document` content block, so no client-side PDF parsing is needed).
 - Save resume text locally (opt-in) so it doesn't need re-pasting.
@@ -177,34 +177,34 @@ Handle each of these with a clear, human-readable message in the UI (no raw stac
 resume-tailor/
 ├── CLAUDE.md
 ├── README.md
-├── index.html
-├── package.json
-├── tsconfig.json              # strict: true
-├── vite.config.ts
+├── index.html                 # loads public/theme.js before first paint
+├── vercel.json                # CSP + security headers (also used by `vite preview`)
+├── public/
+│   └── theme.js               # applies dark/light class before React loads
 ├── src/
-│   ├── main.tsx
 │   ├── App.tsx
-│   ├── config/
-│   │   └── models.ts          # model IDs, labels, rough costs
-│   ├── schemas/
-│   │   └── analysis.ts        # Zod schema + inferred type
+│   ├── index.css              # Tailwind + semantic colour tokens (light/dark)
+│   ├── config/models.ts       # model IDs, prices, max_tokens, effort, cost helpers
+│   ├── schemas/analysis.ts    # Zod schema + inferred type (+ outputFormat test)
+│   ├── types/resume.ts        # ResumeInput: text | pdf
 │   ├── prompts/
-│   │   └── analyze.ts         # system prompt + message builder
+│   │   ├── analyze.ts         # analysis system prompt + message builder
+│   │   └── coverLetter.ts     # cover letter system prompt + message builder
 │   ├── services/
-│   │   ├── provider.ts        # AnalysisProvider interface
-│   │   └── anthropic.ts       # Anthropic implementation (streaming)
+│   │   ├── provider.ts        # AnalysisProvider (analyze, draftCoverLetter), AnalysisError
+│   │   ├── anthropic.ts       # Anthropic implementation, lazy-loaded SDK, shared streaming
+│   │   └── errors.ts          # user-facing copy per error kind
 │   ├── hooks/
-│   │   └── useAnalysis.ts     # state machine: idle | loading | streaming | success | error
-│   ├── components/
-│   │   ├── KeyInput.tsx
-│   │   ├── InputPanel.tsx
-│   │   ├── ResultView.tsx
-│   │   ├── BulletRewrite.tsx
-│   │   └── ErrorBanner.tsx
-│   └── utils/
-│       ├── parseJson.ts       # safe JSON extraction + Zod parse
-│       └── storage.ts         # safe localStorage wrapper (try/catch)
-└── tests/                     # or colocated *.test.ts files
+│   │   ├── useAnalysis.ts     # idle | loading | streaming | success | error, retry, onSuccess
+│   │   ├── useCoverLetter.ts  # same lifecycle for the letter
+│   │   ├── useApiKey.ts       # in-memory key, opt-in persistence
+│   │   ├── useResume.ts       # text/PDF draft, opt-in persistence
+│   │   ├── useHistory.ts      # opt-in saved analyses
+│   │   └── useTheme.ts        # system/light/dark
+│   ├── components/            # presentational components (no API calls)
+│   ├── utils/                 # parseJson, storage, readResumeFile, history, toMarkdown, validateInputs
+│   └── test/                  # setup, fixtures, fakeProvider
+└── (tests are colocated as *.test.ts(x))
 ```
 
 Adjust if there's a good reason, but keep the separation: **UI components don't call the API directly; they go through the hook and service layer.**
@@ -273,7 +273,7 @@ The README is the front door of the portfolio. Include:
 
 ## 16. Definition of done (Phase 1)
 
-Live at https://resume-tailor-jet.vercel.app (repo: github.com/VanshVg/resume-tailor). Still to do: real-key runs on Sonnet and Haiku, then the README live link and a real screenshot.
+Live at https://resume-tailor-jet.vercel.app (repo: github.com/VanshVg/resume-tailor). Still to do: real-key runs on Sonnet and Haiku (now also: a PDF resume and a cover letter), then a real screenshot in the README.
 
 - [ ] I can paste my resume and a job description, enter my key, and get structured suggestions.
 - [ ] Output streams in and is validated with Zod.
