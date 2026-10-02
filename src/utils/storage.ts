@@ -44,4 +44,6 @@ export function removeItem(key: string): boolean {
 
 export const STORAGE_KEYS = {
   apiKey: "resume-tailor:anthropic-api-key",
+  resumeText: "resume-tailor:resume-text",
+  resumePdf: "resume-tailor:resume-pdf",
 } as const;

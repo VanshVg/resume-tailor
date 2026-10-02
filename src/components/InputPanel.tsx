@@ -11,6 +11,10 @@ interface InputPanelProps {
   readonly onResumeTextChange: (text: string) => void;
   readonly onResumePdfChange: (pdf: PdfResume | null) => void;
   readonly resumeStatus: FieldStatus;
+  readonly rememberResume: boolean;
+  readonly onRememberResumeChange: (value: boolean) => void;
+  readonly resumeSaveWarning: string | null;
+  readonly onClearResume: () => void;
   readonly jobDescription: string;
   readonly onJobDescriptionChange: (value: string) => void;
   readonly jobDescriptionStatus: FieldStatus;
@@ -27,6 +31,10 @@ export function InputPanel(props: InputPanelProps) {
           onTextChange={props.onResumeTextChange}
           onPdfChange={props.onResumePdfChange}
           textStatus={props.resumeStatus}
+          remember={props.rememberResume}
+          onRememberChange={props.onRememberResumeChange}
+          saveWarning={props.resumeSaveWarning}
+          onClear={props.onClearResume}
         />
         <div className="md:pt-9">
           <TextField

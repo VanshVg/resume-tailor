@@ -13,6 +13,10 @@ interface ResumeFieldProps {
   readonly onTextChange: (text: string) => void;
   readonly onPdfChange: (pdf: PdfResume | null) => void;
   readonly textStatus: FieldStatus;
+  readonly remember: boolean;
+  readonly onRememberChange: (value: boolean) => void;
+  readonly saveWarning: string | null;
+  readonly onClear: () => void;
 }
 
 const MODES: readonly { value: ResumeMode; label: string }[] = [
@@ -32,6 +36,10 @@ export function ResumeField({
   onTextChange,
   onPdfChange,
   textStatus,
+  remember,
+  onRememberChange,
+  saveWarning,
+  onClear,
 }: ResumeFieldProps) {
   const id = useId();
   const [fileStatus, setFileStatus] = useState<FieldStatus>(null);
@@ -118,6 +126,29 @@ export function ResumeField({
           </p>
         )}
       </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <label className="flex items-center gap-2 text-sm text-slate-800">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => {
+              onRememberChange(e.target.checked);
+            }}
+            className="size-4 accent-indigo-600"
+          />
+          Remember my resume on this device
+        </label>
+        <button
+          type="button"
+          onClick={onClear}
+          disabled={!draft.text && !draft.pdf}
+          className="btn-secondary px-2 py-1 text-xs"
+        >
+          Clear resume
+        </button>
+      </div>
+      {saveWarning && <p className="mt-1 text-sm text-amber-800">{saveWarning}</p>}
     </fieldset>
   );
 }
