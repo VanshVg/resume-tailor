@@ -4,11 +4,13 @@ interface CopyButtonProps {
   readonly text: string;
   /** Accessible name, e.g. "Copy improved bullet". */
   readonly label: string;
+  /** Visible text before copying. */
+  readonly idleText?: string;
 }
 
 type CopyStatus = "idle" | "copied" | "failed";
 
-export function CopyButton({ text, label }: CopyButtonProps) {
+export function CopyButton({ text, label, idleText = "Copy" }: CopyButtonProps) {
   const [status, setStatus] = useState<CopyStatus>("idle");
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export function CopyButton({ text, label }: CopyButtonProps) {
       className="btn-secondary shrink-0 px-2 py-1 text-xs"
     >
       <span aria-live="polite">
-        {status === "copied" ? "Copied!" : status === "failed" ? "Copy failed" : "Copy"}
+        {status === "copied" ? "Copied!" : status === "failed" ? "Copy failed" : idleText}
       </span>
     </button>
   );

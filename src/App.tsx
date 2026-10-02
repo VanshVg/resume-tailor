@@ -33,10 +33,10 @@ export function App({ provider = anthropicProvider }: AppProps) {
   const history = useHistory();
   const { add: addToHistory } = history;
   const saveToHistory = useCallback(
-    ({ analysis, modelId: usedModel, spend, params }: AnalysisSuccess) => {
+    ({ analysis, modelId: usedModel, spend, params, completedAt }: AnalysisSuccess) => {
       addToHistory({
         id: newEntryId(),
-        createdAt: new Date().toISOString(),
+        createdAt: completedAt.toISOString(),
         modelId: usedModel,
         analysis,
         jobDescription: params.input.jobDescription,
@@ -187,6 +187,7 @@ export function App({ provider = anthropicProvider }: AppProps) {
                 analysis={viewing.analysis}
                 modelId={viewing.modelId}
                 spend={viewing.spend}
+                createdAt={new Date(viewing.createdAt)}
               />
               <CoverLetterPanel
                 key={`saved-${viewing.id}`}
@@ -246,6 +247,7 @@ export function App({ provider = anthropicProvider }: AppProps) {
                     analysis={state.analysis}
                     modelId={state.modelId}
                     spend={state.spend}
+                    createdAt={state.completedAt}
                   />
                   <CoverLetterPanel
                     key={`run-${state.runId}`}

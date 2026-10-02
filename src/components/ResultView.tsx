@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { getModelLabel } from "../config/models";
+import { formatCost, getModelLabel } from "../config/models";
+import { ExportButtons } from "./ExportButtons";
 import type { Spend } from "../hooks/useAnalysis";
 import type { Analysis, Importance } from "../schemas/analysis";
 import { BulletRewrite } from "./BulletRewrite";
@@ -10,6 +11,8 @@ interface ResultViewProps {
   /** A string, so saved history entries for retired models still render. */
   readonly modelId: string;
   readonly spend: Spend;
+  /** When the analysis was made (for the export header and file name). */
+  readonly createdAt: Date;
 }
 
 function scoreBand(score: number): { label: string; color: string; bar: string } {
@@ -53,7 +56,7 @@ function TextList({ items }: { readonly items: readonly string[] }) {
   );
 }
 
-export function ResultView({ analysis, modelId, spend }: ResultViewProps) {
+export function ResultView({ analysis, modelId, spend, createdAt }: ResultViewProps) {
   const band = scoreBand(analysis.matchScore);
 
   return (
@@ -87,6 +90,16 @@ export function ResultView({ analysis, modelId, spend }: ResultViewProps) {
           <p className="mt-1 text-fg">{analysis.summary}</p>
           <div className="mt-2">
             <SpendNote spend={spend} prefix={`Analyzed by ${getModelLabel(modelId)} for`} />
+          </div>
+          <div className="mt-3">
+            <ExportButtons
+              analysis={analysis}
+              meta={{
+                modelLabel: getModelLabel(modelId),
+                cost: formatCost(spend.cost),
+                date: createdAt,
+              }}
+            />
           </div>
         </div>
       </div>

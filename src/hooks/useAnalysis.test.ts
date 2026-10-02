@@ -70,6 +70,7 @@ describe("useAnalysis", () => {
       modelId: "claude-sonnet-5-5",
       spend: { usage, cost: expect.closeTo(0.021, 5) as number },
       input: params.input,
+      completedAt: expect.any(Date) as Date,
     });
     expect(provider.calls[0]?.model.id).toBe("claude-sonnet-5-5");
   });

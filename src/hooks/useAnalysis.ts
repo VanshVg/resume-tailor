@@ -38,6 +38,7 @@ export type AnalysisState =
       readonly spend: Spend;
       /** The input this result was produced from (fields may have changed since). */
       readonly input: AnalyzeInput;
+      readonly completedAt: Date;
     }
   | {
       readonly status: "error";
@@ -52,6 +53,7 @@ export interface AnalysisSuccess {
   readonly modelId: ModelId;
   readonly spend: Spend;
   readonly params: AnalysisParams;
+  readonly completedAt: Date;
 }
 
 export interface UseAnalysisOptions {
@@ -121,6 +123,7 @@ export function useAnalysis(
             const total = spend();
             if (total === null) throw new Error("unreachable: usage recorded above");
             runCounterRef.current += 1;
+            const completedAt = new Date();
             update({
               status: "success",
               runId: runCounterRef.current,
@@ -128,6 +131,7 @@ export function useAnalysis(
               modelId: params.modelId,
               spend: total,
               input: params.input,
+              completedAt,
             });
             if (controllerRef.current === controller) {
               onSuccessRef.current?.({
@@ -135,6 +139,7 @@ export function useAnalysis(
                 modelId: params.modelId,
                 spend: total,
                 params,
+                completedAt,
               });
             }
             return;
