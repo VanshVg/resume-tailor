@@ -4,7 +4,7 @@
 
 **Live demo:** https://resume-tailor-jet.vercel.app
 
-![Resume Tailor showing a 78/100 match score, missing keywords, and side-by-side bullet rewrites](docs/screenshot.png)
+![Resume Tailor: resume and job description cards, then a 78/100 match score with missing keywords, bullet rewrites, strengths and gaps](docs/screenshot.png)
 
 <sub>Screenshot shows sample output.</sub>
 

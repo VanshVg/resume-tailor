@@ -126,7 +126,7 @@ type Analysis = {
 };
 ```
 
-Rendering: show the job title/company and match score prominently, then the sections in the order above. Show `original` and `improved` bullets side by side, with a copy button on `improved`.
+Rendering: show the job title/company and match score prominently (score ring + summary + counts), then the sections **most actionable first**: missing keywords (sorted high → low importance), bullet rewrites, strengths and gaps side by side, section advice, then cover letter points with the cover letter drafter. (Changed from the schema order in the 2026-10-02 UI redesign; the Markdown export uses the same order.) Show `original` and `improved` bullets side by side, with a copy button on `improved`.
 
 ## 7. Prompt design
 
@@ -201,13 +201,21 @@ resume-tailor/
 │   │   ├── useResume.ts       # text/PDF draft, opt-in persistence
 │   │   ├── useHistory.ts      # opt-in saved analyses
 │   │   └── useTheme.ts        # system/light/dark
-│   ├── components/            # presentational components (no API calls)
+│   ├── components/            # presentational components (no API calls); ui/ = primitives
 │   ├── utils/                 # parseJson, storage, readResumeFile, history, toMarkdown, validateInputs
 │   └── test/                  # setup, fixtures, fakeProvider
 └── (tests are colocated as *.test.ts(x))
 ```
 
 Adjust if there's a good reason, but keep the separation: **UI components don't call the API directly; they go through the hook and service layer.**
+
+### UI conventions (2026-10-02 redesign)
+
+- **Layout: single-page workspace.** Sticky top bar (logo, "Saved" opens the history drawer, "API key" opens the settings dialog with a green/amber status dot, icon theme switch). First run shows a "Connect your Anthropic API key" card instead of a key field in the main flow. Below that: two numbered input cards (1 · Your resume, 2 · Job description) of equal height, an action bar (model `<select>`, cost hint, Analyze, and only the *first* blocker as a one-line description), one privacy line, then results.
+- **Primitives** live in `src/components/ui/`: `Modal` (native `<dialog>`, centred or right-side drawer; Esc/focus/backdrop are native), `Segmented` (radio group styled as a segmented control), `StepCard`, and `icons.tsx` (hand-written inline SVGs, so no icon package).
+- **Styling:** semantic tokens only (see Dark mode above), plus component classes in `index.css`: `.card`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-icon`, `.input`, `.link`, `.eyebrow`. Selected segments use `bg-raised`, which is lighter than `bg-sunken` in both themes.
+- **Microcopy:** keep it short. One idea per helper line, and no paragraphs of grey small print; put detail in dialogs or `<details>`.
+- **Tests:** jsdom lacks `<dialog>` methods, so `src/test/setup.ts` emulates `showModal`/`close`. Password inputs have no `textbox` role, so find the key field with `getByLabelText`.
 
 ## 10. Code quality rules
 
