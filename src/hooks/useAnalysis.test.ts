@@ -12,7 +12,7 @@ import { useAnalysis, type AnalysisParams, type AnalysisState } from "./useAnaly
 const params: AnalysisParams = {
   apiKey: "sk-ant-test",
   modelId: "claude-sonnet-5-5",
-  input: { resume: "resume", jobDescription: "job" },
+  input: { resume: { kind: "text", text: "resume" }, jobDescription: "job" },
 };
 
 const usage = { inputTokens: 3000, outputTokens: 1500 };

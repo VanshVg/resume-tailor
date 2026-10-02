@@ -8,6 +8,7 @@ import { ResultView } from "./components/ResultView";
 import { DEFAULT_MODEL_ID, getModel, type ModelId } from "./config/models";
 import { useAnalysis } from "./hooks/useAnalysis";
 import { useApiKey } from "./hooks/useApiKey";
+import { toResumeInput, useResume } from "./hooks/useResume";
 import { anthropicProvider } from "./services/anthropic";
 import type { AnalysisProvider } from "./services/provider";
 import { checkInputs } from "./utils/validateInputs";
@@ -20,18 +21,19 @@ interface AppProps {
 export function App({ provider = anthropicProvider }: AppProps) {
   const key = useApiKey();
   const [modelId, setModelId] = useState<ModelId>(DEFAULT_MODEL_ID);
-  const [resume, setResume] = useState("");
+  const resume = useResume();
   const [jobDescription, setJobDescription] = useState("");
   const { state, run, retry, cancel, reset } = useAnalysis(provider);
   const blockersId = useId();
 
-  const check = checkInputs({ apiKey: key.apiKey, resume, jobDescription });
+  const check = checkInputs({ apiKey: key.apiKey, resume: resume.draft, jobDescription });
   const busy = state.status === "loading" || state.status === "streaming";
   const canAnalyze = check.blockers.length === 0 && !busy;
 
   function analyze() {
-    if (!canAnalyze) return;
-    run({ apiKey: key.apiKey.trim(), modelId, input: { resume, jobDescription } });
+    const resumeInput = toResumeInput(resume.draft);
+    if (!canAnalyze || !resumeInput) return;
+    run({ apiKey: key.apiKey.trim(), modelId, input: { resume: resumeInput, jobDescription } });
   }
 
   return (
@@ -71,8 +73,10 @@ export function App({ provider = anthropicProvider }: AppProps) {
 
           <section className="rounded-xl border border-slate-200 bg-white p-5">
             <InputPanel
-              resume={resume}
-              onResumeChange={setResume}
+              resume={resume.draft}
+              onResumeModeChange={resume.setMode}
+              onResumeTextChange={resume.setText}
+              onResumePdfChange={resume.setPdf}
               resumeStatus={check.resume}
               jobDescription={jobDescription}
               onJobDescriptionChange={setJobDescription}

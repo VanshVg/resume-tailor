@@ -1,6 +1,6 @@
 import Anthropic, { type APIError } from "@anthropic-ai/sdk";
 import { describe, expect, it } from "vitest";
-import { toAnalysisError } from "./anthropic";
+import { buildUserContent, toAnalysisError } from "./anthropic";
 import { AnalysisError } from "./provider";
 
 function apiError(status: number): APIError {
@@ -57,5 +57,30 @@ describe("toAnalysisError", () => {
       Anthropic.APIError.generate(401, { message: `bad key ${key}` }, `bad key ${key}`, undefined),
     );
     expect(error.message).not.toContain(key);
+  });
+});
+
+describe("buildUserContent", () => {
+  it("sends a text resume as a single string", () => {
+    const content = buildUserContent({
+      resume: { kind: "text", text: "Jane" },
+      jobDescription: "Engineer",
+    });
+    expect(typeof content).toBe("string");
+  });
+
+  it("sends a PDF resume as a document block before the text", () => {
+    const content = buildUserContent({
+      resume: { kind: "pdf", fileName: "cv.pdf", base64: "JVBERi0=", sizeBytes: 5 },
+      jobDescription: "Engineer",
+    });
+    expect(content).toEqual([
+      {
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: "JVBERi0=" },
+        title: "Resume",
+      },
+      { type: "text", text: expect.stringContaining("attached PDF document") as string },
+    ]);
   });
 });

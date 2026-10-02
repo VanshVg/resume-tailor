@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { TokenUsage } from "../config/models";
-import { buildUserMessage, SYSTEM_PROMPT } from "../prompts/analyze";
+import { buildUserMessage, SYSTEM_PROMPT, type AnalyzeInput } from "../prompts/analyze";
 import { AnalysisSchema } from "../schemas/analysis";
 import {
   AnalysisError,
@@ -32,6 +32,20 @@ async function loadSdk(): Promise<{
     // happens in one place (parseJson), with our own retry logic.
     format: { type: "json_schema", schema: zodOutputFormat(AnalysisSchema).schema },
   };
+}
+
+/** The user turn: a PDF resume goes first as a document block, then the text. */
+export function buildUserContent(input: AnalyzeInput): Anthropic.MessageParam["content"] {
+  const text = buildUserMessage(input);
+  if (input.resume.kind === "text") return text;
+  return [
+    {
+      type: "document",
+      source: { type: "base64", media_type: "application/pdf", data: input.resume.base64 },
+      title: "Resume",
+    },
+    { type: "text", text },
+  ];
 }
 
 function toUsage(usage: Anthropic.Usage): TokenUsage {
@@ -119,7 +133,7 @@ export const anthropicProvider: AnalysisProvider = {
           model: model.id,
           max_tokens: model.maxTokens,
           system: SYSTEM_PROMPT,
-          messages: [{ role: "user", content: buildUserMessage(input) }],
+          messages: [{ role: "user", content: buildUserContent(input) }],
           output_config: {
             format: sdk.format,
             ...(model.effort === null ? {} : { effort: model.effort }),

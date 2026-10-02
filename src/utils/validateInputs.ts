@@ -1,3 +1,5 @@
+import type { ResumeDraft } from "../hooks/useResume";
+
 export const LIMITS = {
   /** Below this, there isn't enough to analyze meaningfully. */
   minResumeChars: 200,
@@ -19,7 +21,7 @@ export interface InputCheck {
 
 export interface Inputs {
   readonly apiKey: string;
-  readonly resume: string;
+  readonly resume: ResumeDraft;
   readonly jobDescription: string;
 }
 
@@ -42,10 +44,13 @@ export function checkInputs({ apiKey, resume, jobDescription }: Inputs): InputCh
         }
       : null;
 
-  const resumeStatus = tooShort(resume, LIMITS.minResumeChars, "resume");
+  // A PDF's text length isn't known in the browser, so length checks only
+  // apply to pasted text.
+  const resumeText = resume.mode === "text" ? resume.text : "";
+  const resumeStatus = tooShort(resumeText, LIMITS.minResumeChars, "resume");
   const jobStatus = tooShort(jobDescription, LIMITS.minJobDescriptionChars, "job description");
 
-  const combined = resume.trim().length + jobDescription.trim().length;
+  const combined = resumeText.trim().length + jobDescription.trim().length;
   const sizeStatus: FieldStatus =
     combined > LIMITS.combinedWarnChars
       ? {
@@ -56,7 +61,9 @@ export function checkInputs({ apiKey, resume, jobDescription }: Inputs): InputCh
 
   const blockers: string[] = [];
   if (key.length === 0) blockers.push("Enter your Anthropic API key.");
-  if (resume.trim().length === 0) blockers.push("Paste your resume.");
+  if (resume.mode === "file") {
+    if (!resume.pdf) blockers.push("Upload your resume.");
+  } else if (resume.text.trim().length === 0) blockers.push("Paste your resume.");
   else if (resumeStatus) blockers.push("Your resume is too short.");
   if (jobDescription.trim().length === 0) blockers.push("Paste the job description.");
   else if (jobStatus) blockers.push("The job description is too short.");
