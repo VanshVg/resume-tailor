@@ -102,7 +102,7 @@ export function HistoryDrawer({
                     className="hover:bg-sunken focus-visible:outline-focus flex min-w-0 flex-1 items-center gap-3 rounded-l-xl p-3 text-left focus-visible:outline-2"
                   >
                     <span
-                      className={`grid size-10 shrink-0 place-items-center rounded-lg text-sm font-bold tabular-nums ${SCORE_BADGE[band.tone]}`}
+                      className={`grid size-10 shrink-0 place-items-center rounded-lg text-sm font-semibold tabular-nums ${SCORE_BADGE[band.tone]}`}
                     >
                       {entry.analysis.matchScore}
                     </span>

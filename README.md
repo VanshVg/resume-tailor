@@ -26,16 +26,16 @@
 
 ## Tech stack
 
-| Concern    | Choice                                                    |
-| ---------- | --------------------------------------------------------- |
-| Language   | TypeScript (`strict`, `noUncheckedIndexedAccess`)         |
-| UI         | React 19 + Vite                                           |
-| Styling    | Tailwind CSS v4                                           |
-| AI         | `@anthropic-ai/sdk` (browser mode), structured outputs    |
-| Validation | Zod                                                       |
-| Tests      | Vitest + React Testing Library (jsdom)                    |
-| Lint       | ESLint (typescript-eslint `strictTypeChecked`) + Prettier |
-| Hosting    | Vercel (static), with a Content-Security-Policy           |
+| Concern    | Choice                                                            |
+| ---------- | ----------------------------------------------------------------- |
+| Language   | TypeScript (`strict`, `noUncheckedIndexedAccess`)                 |
+| UI         | React 19 + Vite                                                   |
+| Styling    | Tailwind CSS v4, semantic colour tokens, Geist font (self-hosted) |
+| AI         | `@anthropic-ai/sdk` (browser mode), structured outputs            |
+| Validation | Zod                                                               |
+| Tests      | Vitest + React Testing Library (jsdom)                            |
+| Lint       | ESLint (typescript-eslint `strictTypeChecked`) + Prettier         |
+| Hosting    | Vercel (static), with a Content-Security-Policy                   |
 
 ## Run locally
 

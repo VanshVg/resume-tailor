@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Self-hosted variable fonts (OFL): served from this site, so the CSP's
+   font-src 'self' still applies and no request goes to a font CDN. */
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 /*
  * Semantic colour tokens. Components use these (bg-surface, text-fg-muted,
@@ -8,6 +12,16 @@
  * paint, and kept in sync by useTheme.
  */
 @theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", monospace;
+
+  /* Type scale: nothing below 13px for running text; tighter headings. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.375rem;
+  --text-base--line-height: 1.625rem;
+
   --color-page: var(--color-slate-50);
   --color-surface: var(--color-white);
   --color-sunken: var(--color-slate-100);
@@ -103,7 +117,18 @@
 
 @layer base {
   body {
-    @apply bg-page text-fg antialiased;
+    @apply bg-page text-fg font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply tracking-tight;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
   }
 }
 
@@ -130,7 +155,7 @@
     @apply text-accent-fg hover:text-accent-fg-hover focus-visible:outline-focus font-medium underline underline-offset-2 focus-visible:outline-2;
   }
   .eyebrow {
-    @apply text-fg-subtle text-xs font-semibold tracking-wide uppercase;
+    @apply text-fg-subtle text-[0.6875rem] leading-4 font-semibold tracking-[0.08em] uppercase;
   }
 }
 

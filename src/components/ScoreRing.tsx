@@ -62,7 +62,7 @@ export function ScoreRing({ score }: { readonly score: number }) {
           />
         </svg>
         <span className="absolute inset-0 grid place-items-center">
-          <span className="text-fg text-3xl font-bold tabular-nums">
+          <span className="text-fg text-3xl font-semibold tracking-tight tabular-nums">
             {score}
             <span className="text-fg-subtle text-sm font-medium">/100</span>
           </span>

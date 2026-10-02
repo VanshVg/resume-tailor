@@ -174,7 +174,7 @@ export function ResultView({ analysis, modelId, spend, createdAt, coverLetter }:
             >
               <div className="flex shrink-0 items-center gap-2 sm:w-56">
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${IMPORTANCE_STYLES[item.importance]}`}
+                  className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold tracking-wide uppercase ${IMPORTANCE_STYLES[item.importance]}`}
                 >
                   {item.importance}
                   <span className="sr-only"> importance</span>

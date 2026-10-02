@@ -110,7 +110,7 @@ export function App({ provider = anthropicProvider }: AppProps) {
 
       <main className="mx-auto w-full max-w-5xl flex-1 space-y-8 px-4 py-8">
         <div className="max-w-2xl">
-          <h1 className="text-fg text-2xl font-bold tracking-tight sm:text-3xl">
+          <h1 className="text-fg text-2xl font-semibold tracking-[-0.025em] sm:text-[2rem] sm:leading-10">
             Tailor your resume to the job
           </h1>
           <p className="text-fg-muted mt-2">
