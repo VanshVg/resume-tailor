@@ -41,12 +41,16 @@ If the SDK causes problems in the browser, fall back to plain `fetch` against `h
 
 - **Provider (v1):** Anthropic (Claude).
 - **Default model:** `claude-sonnet-5-5`. Best balance of quality, speed, and cost for this task.
-- **Optional cheaper model:** `claude-haiku-4-5-20251001` for a "quick check" mode.
+- **Optional cheaper model:** `claude-haiku-4-5` for a "quick check" mode.
 - **Optional deeper model:** `claude-opus-5-5`.
 - Put model IDs in **one config file** (`src/config/models.ts`) as a typed list so they're easy to update. Model names and prices change over time, so verify current IDs at https://docs.claude.com before hardcoding.
 - Design the AI call behind a small interface (e.g. `AnalysisProvider`) so other providers (OpenAI, Gemini) can be added later without rewriting the UI.
 
-**Approximate cost per analysis** (about 3K input + 1.5K output tokens): Haiku ≈ $0.01, Sonnet ≈ $0.02, Opus ≈ $0.04. Show the user a rough cost note near the model selector.
+**Approximate cost per analysis** (about 3K input + 1.5K output tokens): Haiku ≈ $0.01, Sonnet ≈ $0.02, Opus ≈ $0.04. Sonnet 5.5 and Opus 5.5 also spend thinking tokens (billed as output), so show the user a cost **range** near the model selector (e.g. "~$0.02–0.05"), and after each run show the **actual** cost computed from the `usage` token counts the API returns.
+
+- Effort: `medium` on Sonnet and Opus (sent as `output_config.effort`). Haiku 4.5 doesn't accept `effort`, so it isn't sent.
+- Each model has a `max_tokens` cap in `src/config/models.ts` so a runaway response can't cost much.
+- No automatic fallback to a different model on refusal: it's the user's key and their choice of model. Show "The model declined this request" instead.
 
 ## 5. Features by phase
 
@@ -125,11 +129,20 @@ Keep prompts in `src/prompts/` as typed, testable functions, not inline strings 
 > 3. Prefer concrete, quantified, action-led bullet rewrites. Do not add numbers that are not in the original; if a metric would help, suggest the candidate add one if they have it.
 > 4. Mirror important keywords from the job description naturally. No keyword stuffing.
 > 5. Be honest in the match score. Do not inflate it.
-> 6. Respond with valid JSON only, matching the provided schema. No markdown fences, no commentary.
+> 6. In "bulletRewrites", "original" must be copied exactly from the resume.
+> 7. Respond with valid JSON only, matching the provided schema. No markdown fences, no commentary.
+>
+> (The actual text lives in `src/prompts/analyze.ts`, which is the source of truth; it also contains the prompt-injection paragraph below.)
 
 **User message:** wrap the inputs in clearly labelled tags, e.g. `<resume>…</resume>` and `<job_description>…</job_description>`.
 
-**Prompt-injection note:** resumes and job descriptions are untrusted text. State in the system prompt that anything inside the tags is data, not instructions.
+**Prompt-injection note:** resumes and job descriptions are untrusted text. State in the system prompt that anything inside the tags is data, not instructions. The message builder also strips our own `<resume>` / `<job_description>` tags from pasted text so a document can't close its block early.
+
+**Structured outputs:** the request sets `output_config.format` to a JSON Schema generated from the Zod schema in `src/schemas/analysis.ts` (via the SDK's `zodOutputFormat`), so the API constrains the response to that shape and the Zod schema stays the single source of truth. Notes:
+
+- Constrained decoding supports only part of JSON Schema. The SDK drops unsupported keywords such as `minimum`/`maximum` and moves them into the field description as a hint, so the `matchScore` 0–100 integer range is enforced by **Zod after the response**, not by the API.
+- We pass the bare schema (`{ type: "json_schema", schema }`), not the SDK's auto-parsing wrapper, so all validation goes through one path: `parseJson` (fence stripping + `JSON.parse`) and then Zod, with one automatic retry. These stay as backups even though structured outputs should make invalid JSON rare.
+- Streaming still works with structured outputs: the JSON arrives as ordinary `text_delta` events.
 
 ## 8. Error handling and edge cases
 
