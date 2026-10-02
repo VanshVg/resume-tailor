@@ -56,7 +56,7 @@ export function App({ provider = anthropicProvider }: AppProps) {
             analyze();
           }}
         >
-          <section className="grid gap-6 rounded-xl border border-slate-200 bg-white p-5 md:grid-cols-2">
+          <section className="grid grid-cols-1 gap-6 rounded-xl border border-slate-200 bg-white p-5 md:grid-cols-2 [&>*]:min-w-0">
             <KeyInput
               apiKey={key.apiKey}
               onApiKeyChange={key.setApiKey}

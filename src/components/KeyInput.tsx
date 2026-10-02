@@ -29,7 +29,7 @@ export function KeyInput({
       <label htmlFor={`${id}-key`} className="block text-sm font-medium text-slate-900">
         Anthropic API key
       </label>
-      <div className="mt-1 flex gap-2">
+      <div className="mt-1 flex flex-wrap gap-2">
         <input
           id={`${id}-key`}
           type={visible ? "text" : "password"}
@@ -41,7 +41,7 @@ export function KeyInput({
           spellCheck={false}
           placeholder="sk-ant-..."
           aria-describedby={`${id}-note ${id}-status`}
-          className="input min-w-0 flex-1 font-mono"
+          className="input min-w-48 flex-1 font-mono"
         />
         <button
           type="button"
