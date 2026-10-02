@@ -69,7 +69,7 @@ If the SDK causes problems in the browser, fall back to plain `fetch` against `h
 - Copy-to-clipboard button on each suggested rewrite.
 - Deployed publicly, with a README.
 
-### Phase 2: Nice to have (only after Phase 1 is deployed and I've used it)
+### Phase 2: Nice to have (in progress; I chose to start it right after the Phase 1 deploy, before real-key testing)
 
 - PDF resume upload (send to Claude as a base64 `document` content block, so no client-side PDF parsing is needed).
 - Save resume text locally (opt-in) so it doesn't need re-pasting.
@@ -77,6 +77,17 @@ If the SDK causes problems in the browser, fall back to plain `fetch` against `h
 - Dark mode.
 - "Generate cover letter draft" button based on the analysis.
 - Export results as Markdown.
+
+#### Phase 2 decisions (agreed 2026-10-02)
+
+- **Resume upload:** tabs for "Upload file" and "Paste text". PDF (max 5 MB) goes to Claude as a base64 `document` block, placed before the text block, with no client-side parsing. `.txt`/`.md` are read in the browser into the textarea. `.docx` is rejected with "please export as PDF" (parsing it would need a ~600 KB dependency). The minimum-length check applies only to pasted text. A PDF costs about 1.5–3K input tokens per page; mention it in the cost hint. The provider interface takes `ResumeInput = { kind: "text" } | { kind: "pdf" }` so each provider maps it its own way.
+- **Remember my resume:** opt-in, like the key. Stored in `localStorage`; PDFs are saved only if under ~2 MB (warn otherwise). Has a clear button.
+- **History:** **opt-in** ("Save analyses on this device"), off by default, per "privacy by default". Each entry stores date, model, job title/company, match score, actual cost, the full analysis and the job description, but **never the resume**. Newest first, capped at 25. Entries can be reopened, deleted individually, or all cleared.
+- **Job labels:** the analysis schema gains `jobTitle` (string) and `company` (string or null), extracted from the job description by the model (see Section 6).
+- **Dark mode:** System / Light / Dark, default System, saved in `localStorage`. The theme is applied before first paint by `public/theme.js`, an external file because the CSP forbids inline scripts.
+- **Cover letter draft:** a second streamed request (plain text, no structured output) built from the resume, job description and analysis. Same no-fabrication rules, 250–350 words, professional tone, using the model selected for the analysis. It needs the resume, so it's available for the current analysis, or for a history entry while a saved resume exists. Shown in an editable textarea with a copy button and its actual cost.
+- **Markdown export:** "Download .md" and "Copy as Markdown" on results, produced by a pure, tested `toMarkdown` function.
+- **No new dependencies** for Phase 2.
 
 ### Phase 3: Stretch
 
@@ -254,14 +265,18 @@ The README is the front door of the portfolio. Include:
 - Explain non-obvious decisions briefly. I'm using this project to demonstrate my skills, so I need to understand every part of it.
 - If something in this file is ambiguous or seems wrong (for example, a model ID that no longer exists), **ask me**. Don't silently guess.
 - Don't add dependencies without telling me why.
-- Don't build features from a later phase early.
+- Don't build features from a later phase early (unless I explicitly say to, as I did for Phase 2).
+- **Keep this file current.** When we make a decision or change behaviour, update the relevant section here in the same commit, so this file always matches the code.
+- **No AI attribution in git.** Never add `Co-Authored-By: Claude` (or similar) trailers to commits, or "Generated with Claude Code" to PR descriptions.
 
 ## 16. Definition of done (Phase 1)
+
+Live at https://resume-tailor-jet.vercel.app (repo: github.com/VanshVg/resume-tailor). Still to do: real-key runs on Sonnet and Haiku, then the README live link and a real screenshot.
 
 - [ ] I can paste my resume and a job description, enter my key, and get structured suggestions.
 - [ ] Output streams in and is validated with Zod.
 - [ ] All error cases in Section 8 are handled.
-- [ ] Types check with zero errors in strict mode; lint passes; tests pass.
-- [ ] Deployed at a public URL.
+- [x] Types check with zero errors in strict mode; lint passes; tests pass.
+- [x] Deployed at a public URL.
 - [ ] README complete with screenshot and design decisions.
 - [ ] I've used it on at least one real job application.
