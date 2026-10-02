@@ -1,12 +1,16 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { TokenUsage } from "../config/models";
-import { buildUserMessage, SYSTEM_PROMPT, type AnalyzeInput } from "../prompts/analyze";
+import { buildUserMessage, SYSTEM_PROMPT } from "../prompts/analyze";
+import { buildCoverLetterMessage, COVER_LETTER_SYSTEM_PROMPT } from "../prompts/coverLetter";
+import type { ResumeInput } from "../types/resume";
 import { AnalysisSchema } from "../schemas/analysis";
 import {
   AnalysisError,
   type AnalysisProvider,
   type AnalysisRequest,
-  type AnalysisResponse,
+  type CoverLetterRequest,
+  type ProviderResponse,
+  type StreamRequest,
 } from "./provider";
 
 type Sdk = typeof import("@anthropic-ai/sdk");
@@ -35,13 +39,15 @@ async function loadSdk(): Promise<{
 }
 
 /** The user turn: a PDF resume goes first as a document block, then the text. */
-export function buildUserContent(input: AnalyzeInput): Anthropic.MessageParam["content"] {
-  const text = buildUserMessage(input);
-  if (input.resume.kind === "text") return text;
+export function buildUserContent(
+  resume: ResumeInput,
+  text: string,
+): Anthropic.MessageParam["content"] {
+  if (resume.kind === "text") return text;
   return [
     {
       type: "document",
-      source: { type: "base64", media_type: "application/pdf", data: input.resume.base64 },
+      source: { type: "base64", media_type: "application/pdf", data: resume.base64 },
       title: "Resume",
     },
     { type: "text", text },
@@ -101,68 +107,92 @@ export function toAnalysisError(
   return new AnalysisError("network", error instanceof Error ? error.name : "Unknown error");
 }
 
-export const anthropicProvider: AnalysisProvider = {
-  async analyze({
+type LoadedSdk = Awaited<ReturnType<typeof loadSdk>>;
+
+interface StreamOptions {
+  readonly system: string;
+  readonly content: Anthropic.MessageParam["content"];
+  /** Constrain the response to the analysis JSON Schema. */
+  readonly structured: boolean;
+}
+
+/** Shared by both tasks: one streamed message, errors and stop reasons mapped. */
+async function streamMessage(
+  { apiKey, model, signal, onText }: StreamRequest<unknown>,
+  build: (sdk: LoadedSdk) => StreamOptions,
+): Promise<ProviderResponse> {
+  let sdk: LoadedSdk;
+  try {
+    sdk = await loadSdk();
+  } catch {
+    // A failed chunk download (offline, or a stale tab after a deploy).
+    throw new AnalysisError("network", "Failed to load the Anthropic SDK");
+  }
+  const { system, content, structured } = build(sdk);
+
+  // Safe in a browser here: the key is the user's own, typed into this page,
+  // and is sent only to api.anthropic.com.
+  const client = new sdk.Anthropic({
     apiKey,
-    model,
-    input,
-    signal,
-    onText,
-  }: AnalysisRequest): Promise<AnalysisResponse> {
-    let sdk: Awaited<ReturnType<typeof loadSdk>>;
-    try {
-      sdk = await loadSdk();
-    } catch {
-      // A failed chunk download (offline, or a stale tab after a deploy).
-      throw new AnalysisError("network", "Failed to load the Anthropic SDK");
-    }
+    dangerouslyAllowBrowser: true,
+    maxRetries: 1,
+    timeout: REQUEST_TIMEOUT_MS,
+  });
 
-    // Safe in a browser here: the key is the user's own, typed into this page,
-    // and is sent only to api.anthropic.com.
-    const client = new sdk.Anthropic({
-      apiKey,
-      dangerouslyAllowBrowser: true,
-      maxRetries: 1,
-      timeout: REQUEST_TIMEOUT_MS,
-    });
-
-    let message: Anthropic.Message;
-    try {
-      const stream = client.messages.stream(
-        {
-          model: model.id,
-          max_tokens: model.maxTokens,
-          system: SYSTEM_PROMPT,
-          messages: [{ role: "user", content: buildUserContent(input) }],
-          output_config: {
-            format: sdk.format,
-            ...(model.effort === null ? {} : { effort: model.effort }),
-          },
+  let message: Anthropic.Message;
+  try {
+    const stream = client.messages.stream(
+      {
+        model: model.id,
+        max_tokens: model.maxTokens,
+        system,
+        messages: [{ role: "user", content }],
+        output_config: {
+          ...(structured ? { format: sdk.format } : {}),
+          ...(model.effort === null ? {} : { effort: model.effort }),
         },
-        { signal },
-      );
-      stream.on("text", onText);
-      message = await stream.finalMessage();
-    } catch (error) {
-      throw toAnalysisError(sdk.Anthropic, error, signal);
-    }
+      },
+      { signal },
+    );
+    stream.on("text", onText);
+    message = await stream.finalMessage();
+  } catch (error) {
+    throw toAnalysisError(sdk.Anthropic, error, signal);
+  }
 
-    const usage = toUsage(message.usage);
-    switch (message.stop_reason) {
-      case "refusal":
-        throw new AnalysisError("refusal", "stop_reason: refusal", usage);
-      case "max_tokens":
-        throw new AnalysisError("truncated", "stop_reason: max_tokens", usage);
-      case "model_context_window_exceeded":
-        throw new AnalysisError("too_large", "stop_reason: model_context_window_exceeded", usage);
-      default:
-        break;
-    }
+  const usage = toUsage(message.usage);
+  switch (message.stop_reason) {
+    case "refusal":
+      throw new AnalysisError("refusal", "stop_reason: refusal", usage);
+    case "max_tokens":
+      throw new AnalysisError("truncated", "stop_reason: max_tokens", usage);
+    case "model_context_window_exceeded":
+      throw new AnalysisError("too_large", "stop_reason: model_context_window_exceeded", usage);
+    default:
+      break;
+  }
 
-    const text = message.content
-      .filter((block): block is Anthropic.TextBlock => block.type === "text")
-      .map((block) => block.text)
-      .join("");
-    return { text, usage };
+  const text = message.content
+    .filter((block): block is Anthropic.TextBlock => block.type === "text")
+    .map((block) => block.text)
+    .join("");
+  return { text, usage };
+}
+
+export const anthropicProvider: AnalysisProvider = {
+  analyze(request: AnalysisRequest) {
+    return streamMessage(request, () => ({
+      system: SYSTEM_PROMPT,
+      content: buildUserContent(request.input.resume, buildUserMessage(request.input)),
+      structured: true,
+    }));
+  },
+
+  draftCoverLetter(request: CoverLetterRequest) {
+    return streamMessage(request, () => ({
+      system: COVER_LETTER_SYSTEM_PROMPT,
+      content: buildUserContent(request.input.resume, buildCoverLetterMessage(request.input)),
+      structured: false,
+    }));
   },
 };

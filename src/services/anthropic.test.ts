@@ -62,25 +62,22 @@ describe("toAnalysisError", () => {
 
 describe("buildUserContent", () => {
   it("sends a text resume as a single string", () => {
-    const content = buildUserContent({
-      resume: { kind: "text", text: "Jane" },
-      jobDescription: "Engineer",
-    });
+    const content = buildUserContent({ kind: "text", text: "Jane" }, "message");
     expect(typeof content).toBe("string");
   });
 
   it("sends a PDF resume as a document block before the text", () => {
-    const content = buildUserContent({
-      resume: { kind: "pdf", fileName: "cv.pdf", base64: "JVBERi0=", sizeBytes: 5 },
-      jobDescription: "Engineer",
-    });
+    const content = buildUserContent(
+      { kind: "pdf", fileName: "cv.pdf", base64: "JVBERi0=", sizeBytes: 5 },
+      "message",
+    );
     expect(content).toEqual([
       {
         type: "document",
         source: { type: "base64", media_type: "application/pdf", data: "JVBERi0=" },
         title: "Resume",
       },
-      { type: "text", text: expect.stringContaining("attached PDF document") as string },
+      { type: "text", text: "message" },
     ]);
   });
 });

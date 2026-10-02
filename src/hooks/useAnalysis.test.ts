@@ -5,8 +5,9 @@ import {
   AnalysisError,
   type AnalysisProvider,
   type AnalysisRequest,
-  type AnalysisResponse,
+  type ProviderResponse,
 } from "../services/provider";
+import { fakeUsage, respond, scriptedProvider } from "../test/fakeProvider";
 import { useAnalysis, type AnalysisParams, type AnalysisState } from "./useAnalysis";
 
 const params: AnalysisParams = {
@@ -15,47 +16,15 @@ const params: AnalysisParams = {
   input: { resume: { kind: "text", text: "resume" }, jobDescription: "job" },
 };
 
-const usage = { inputTokens: 3000, outputTokens: 1500 };
+const usage = fakeUsage;
 const validJson = JSON.stringify(validAnalysis);
-
-/** A provider whose responses are scripted per call. */
-function scriptedProvider(
-  ...steps: ((request: AnalysisRequest) => Promise<AnalysisResponse>)[]
-): AnalysisProvider & { calls: AnalysisRequest[] } {
-  const calls: AnalysisRequest[] = [];
-  return {
-    calls,
-    analyze(request) {
-      calls.push(request);
-      const step = steps[calls.length - 1];
-      if (!step) throw new Error(`Unexpected call #${calls.length}`);
-      return step(request);
-    },
-  };
-}
-
-/** Lets React render between steps, like real network latency would. */
-function tick() {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
-function respond(text: string, chunks = [text]) {
-  return async (request: AnalysisRequest) => {
-    await tick();
-    for (const chunk of chunks) {
-      request.onText(chunk);
-      await tick();
-    }
-    return { text, usage };
-  };
-}
 
 function fail(error: AnalysisError) {
   return () => Promise.reject(error);
 }
 
 /** Never resolves until aborted, then rejects the way the SDK does. */
-function hang(request: AnalysisRequest): Promise<AnalysisResponse> {
+function hang(request: AnalysisRequest): Promise<ProviderResponse> {
   request.onText('{"matchScore":');
   return new Promise((_resolve, reject) => {
     request.signal.addEventListener("abort", () => {
@@ -76,14 +45,14 @@ function setup(provider: AnalysisProvider) {
 
 describe("useAnalysis", () => {
   it("starts idle", () => {
-    const { result } = setup(scriptedProvider());
+    const { result } = setup(scriptedProvider([]));
     expect(result.current.state).toEqual({ status: "idle" });
   });
 
   it("goes loading → streaming → success with cost from usage", async () => {
-    const provider = scriptedProvider(
+    const provider = scriptedProvider([
       respond(validJson, [validJson.slice(0, 10), validJson.slice(10)]),
-    );
+    ]);
     const { result, statuses } = setup(provider);
 
     act(() => {
@@ -96,16 +65,18 @@ describe("useAnalysis", () => {
     expect(statuses).toEqual(expect.arrayContaining(["idle", "loading", "streaming", "success"]));
     expect(result.current.state).toEqual({
       status: "success",
+      runId: 1,
       analysis: validAnalysis,
       modelId: "claude-sonnet-5-5",
       spend: { usage, cost: expect.closeTo(0.021, 5) as number },
+      input: params.input,
     });
     expect(provider.calls[0]?.model.id).toBe("claude-sonnet-5-5");
   });
 
   it("calls onSuccess once with the result and the request params", async () => {
     const onSuccess = vi.fn();
-    const provider = scriptedProvider(respond(validJson));
+    const provider = scriptedProvider([respond(validJson)]);
     const { result } = renderHook(() => useAnalysis(provider, { onSuccess }));
 
     act(() => {
@@ -123,7 +94,7 @@ describe("useAnalysis", () => {
 
   it("retries once automatically when the output is invalid, adding up the cost", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const provider = scriptedProvider(respond("not json"), respond(validJson));
+    const provider = scriptedProvider([respond("not json"), respond(validJson)]);
     const { result } = setup(provider);
 
     act(() => {
@@ -142,7 +113,7 @@ describe("useAnalysis", () => {
   it("reports invalid_output after the retry also fails, keeping the text", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const bad = JSON.stringify({ ...validAnalysis, matchScore: 500 });
-    const { result } = setup(scriptedProvider(respond("garbage"), respond(bad)));
+    const { result } = setup(scriptedProvider([respond("garbage"), respond(bad)]));
 
     act(() => {
       result.current.run(params);
@@ -160,7 +131,7 @@ describe("useAnalysis", () => {
 
   it("does not retry provider errors, and reports their kind", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const provider = scriptedProvider(fail(new AnalysisError("rate_limit", "429")));
+    const provider = scriptedProvider([fail(new AnalysisError("rate_limit", "429"))]);
     const { result } = setup(provider);
 
     act(() => {
@@ -176,10 +147,12 @@ describe("useAnalysis", () => {
 
   it("keeps partial text and billed usage when the stream is interrupted", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const provider = scriptedProvider((request) => {
-      request.onText('{"matchScore": 70, "summ');
-      return Promise.reject(new AnalysisError("truncated", "max_tokens", usage));
-    });
+    const provider = scriptedProvider([
+      (request) => {
+        request.onText('{"matchScore": 70, "summ');
+        return Promise.reject(new AnalysisError("truncated", "max_tokens", usage));
+      },
+    ]);
     const { result } = setup(provider);
 
     act(() => {
@@ -197,7 +170,7 @@ describe("useAnalysis", () => {
   });
 
   it("cancels an in-flight request", async () => {
-    const provider = scriptedProvider(hang);
+    const provider = scriptedProvider([hang]);
     const { result } = setup(provider);
 
     act(() => {
@@ -222,10 +195,10 @@ describe("useAnalysis", () => {
 
   it("retry re-runs the last request", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const provider = scriptedProvider(
+    const provider = scriptedProvider([
       fail(new AnalysisError("overloaded", "529")),
       respond(validJson),
-    );
+    ]);
     const { result } = setup(provider);
 
     act(() => {
@@ -245,14 +218,14 @@ describe("useAnalysis", () => {
   });
 
   it("ignores updates from a run that was replaced", async () => {
-    let resolveFirst: (value: AnalysisResponse) => void = () => undefined;
-    const provider = scriptedProvider(
+    let resolveFirst: (value: ProviderResponse) => void = () => undefined;
+    const provider = scriptedProvider([
       () =>
         new Promise((resolve) => {
           resolveFirst = resolve;
         }),
       respond(validJson),
-    );
+    ]);
     const { result } = setup(provider);
 
     act(() => {

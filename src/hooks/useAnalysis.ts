@@ -31,9 +31,13 @@ export type AnalysisState =
   | { readonly status: "streaming"; readonly attempt: number; readonly partialText: string }
   | {
       readonly status: "success";
+      /** Unique per run, e.g. to reset UI tied to a specific result. */
+      readonly runId: number;
       readonly analysis: Analysis;
       readonly modelId: ModelId;
       readonly spend: Spend;
+      /** The input this result was produced from (fields may have changed since). */
+      readonly input: AnalyzeInput;
     }
   | {
       readonly status: "error";
@@ -72,6 +76,7 @@ export function useAnalysis(
   const [state, setState] = useState<AnalysisState>(IDLE);
   const controllerRef = useRef<AbortController | null>(null);
   const lastParamsRef = useRef<AnalysisParams | null>(null);
+  const runCounterRef = useRef(0);
   // Kept in a ref so a new callback each render doesn't restart anything.
   const onSuccessRef = useRef(onSuccess);
   useEffect(() => {
@@ -115,11 +120,14 @@ export function useAnalysis(
           if (parsed.ok) {
             const total = spend();
             if (total === null) throw new Error("unreachable: usage recorded above");
+            runCounterRef.current += 1;
             update({
               status: "success",
+              runId: runCounterRef.current,
               analysis: parsed.data,
               modelId: params.modelId,
               spend: total,
+              input: params.input,
             });
             if (controllerRef.current === controller) {
               onSuccessRef.current?.({

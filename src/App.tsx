@@ -1,5 +1,6 @@
 import { useCallback, useId, useRef, useState } from "react";
 import { InputPanel } from "./components/InputPanel";
+import { CoverLetterPanel } from "./components/CoverLetterPanel";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { KeyInput } from "./components/KeyInput";
@@ -7,7 +8,7 @@ import { ModelSelect } from "./components/ModelSelect";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { ResultView } from "./components/ResultView";
 import { ThemeSwitch } from "./components/ThemeSwitch";
-import { DEFAULT_MODEL_ID, getModel, type ModelId } from "./config/models";
+import { DEFAULT_MODEL_ID, getModel, isModelId, type ModelId } from "./config/models";
 import { useAnalysis, type AnalysisSuccess } from "./hooks/useAnalysis";
 import { useApiKey } from "./hooks/useApiKey";
 import { useHistory } from "./hooks/useHistory";
@@ -52,15 +53,15 @@ export function App({ provider = anthropicProvider }: AppProps) {
   const resultsHeadingRef = useRef<HTMLHeadingElement>(null);
   const blockersId = useId();
 
+  const currentResume = toResumeInput(resume.draft);
   const check = checkInputs({ apiKey: key.apiKey, resume: resume.draft, jobDescription });
   const busy = state.status === "loading" || state.status === "streaming";
   const canAnalyze = check.blockers.length === 0 && !busy;
 
   function analyze() {
-    const resumeInput = toResumeInput(resume.draft);
-    if (!canAnalyze || !resumeInput) return;
+    if (!canAnalyze || !currentResume) return;
     setViewing(null);
-    run({ apiKey: key.apiKey.trim(), modelId, input: { resume: resumeInput, jobDescription } });
+    run({ apiKey: key.apiKey.trim(), modelId, input: { resume: currentResume, jobDescription } });
   }
 
   function viewSaved(entry: HistoryEntry) {
@@ -187,16 +188,39 @@ export function App({ provider = anthropicProvider }: AppProps) {
                 modelId={viewing.modelId}
                 spend={viewing.spend}
               />
+              <CoverLetterPanel
+                key={`saved-${viewing.id}`}
+                provider={provider}
+                apiKey={key.apiKey}
+                modelId={isModelId(viewing.modelId) ? viewing.modelId : modelId}
+                input={
+                  currentResume
+                    ? {
+                        resume: currentResume,
+                        jobDescription: viewing.jobDescription,
+                        analysis: viewing.analysis,
+                      }
+                    : null
+                }
+                unavailableReason="Saved analyses don't store your resume. Add it above (or turn on “Remember my resume”) to draft a cover letter."
+                note="Uses the resume currently in the resume field."
+              />
             </>
           ) : (
             <>
               <div aria-live="polite">
                 {(state.status === "loading" || state.status === "streaming") && (
                   <ProgressPanel
-                    phase={state.status}
-                    attempt={state.attempt}
-                    receivedChars={state.status === "streaming" ? state.partialText.length : 0}
-                    modelLabel={getModel(modelId).label}
+                    message={
+                      state.status === "loading"
+                        ? `${getModel(modelId).label} is reading your resume and thinking…`
+                        : `Writing suggestions… ${state.partialText.length.toLocaleString("en-US")} characters received`
+                    }
+                    detail={
+                      state.attempt > 1
+                        ? "The first response wasn't in the expected format, so this is an automatic retry."
+                        : undefined
+                    }
                     onCancel={cancel}
                   />
                 )}
@@ -217,7 +241,25 @@ export function App({ provider = anthropicProvider }: AppProps) {
                 </p>
               )}
               {state.status === "success" && (
-                <ResultView analysis={state.analysis} modelId={state.modelId} spend={state.spend} />
+                <>
+                  <ResultView
+                    analysis={state.analysis}
+                    modelId={state.modelId}
+                    spend={state.spend}
+                  />
+                  <CoverLetterPanel
+                    key={`run-${state.runId}`}
+                    provider={provider}
+                    apiKey={key.apiKey}
+                    modelId={state.modelId}
+                    input={{
+                      resume: state.input.resume,
+                      jobDescription: state.input.jobDescription,
+                      analysis: state.analysis,
+                    }}
+                    unavailableReason=""
+                  />
+                </>
               )}
             </>
           )}

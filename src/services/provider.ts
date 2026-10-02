@@ -1,31 +1,35 @@
 import type { ModelOption, TokenUsage } from "../config/models";
 import type { AnalyzeInput } from "../prompts/analyze";
+import type { CoverLetterInput } from "../prompts/coverLetter";
 
 /**
- * The seam between the UI and any AI provider. The hook only talks to this
+ * The seam between the UI and any AI provider. Hooks only talk to this
  * interface, so adding OpenAI or Gemini later means writing one new
  * implementation, not touching components.
+ *
+ * Both methods stream the model's raw text through `onText`, resolve with
+ * the full text and token usage once the response is complete, and reject
+ * with an `AnalysisError`.
  */
 export interface AnalysisProvider {
-  /**
-   * Streams the model's raw text through `onText` and resolves with the full
-   * text once the response is complete. Validation is the caller's job, so
-   * every provider gets the same parsing and retry behaviour.
-   *
-   * Rejects with an `AnalysisError`.
-   */
-  analyze(request: AnalysisRequest): Promise<AnalysisResponse>;
+  /** Returns JSON text; validation is the caller's job, so every provider gets the same parsing and retry behaviour. */
+  analyze(request: AnalysisRequest): Promise<ProviderResponse>;
+  /** Returns the plain-text letter. */
+  draftCoverLetter(request: CoverLetterRequest): Promise<ProviderResponse>;
 }
 
-export interface AnalysisRequest {
+export interface StreamRequest<Input> {
   readonly apiKey: string;
   readonly model: ModelOption;
-  readonly input: AnalyzeInput;
+  readonly input: Input;
   readonly signal: AbortSignal;
   readonly onText: (chunk: string) => void;
 }
 
-export interface AnalysisResponse {
+export type AnalysisRequest = StreamRequest<AnalyzeInput>;
+export type CoverLetterRequest = StreamRequest<CoverLetterInput>;
+
+export interface ProviderResponse {
   readonly text: string;
   readonly usage: TokenUsage;
 }
