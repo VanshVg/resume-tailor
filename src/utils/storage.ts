@@ -46,4 +46,6 @@ export const STORAGE_KEYS = {
   apiKey: "resume-tailor:anthropic-api-key",
   resumeText: "resume-tailor:resume-text",
   resumePdf: "resume-tailor:resume-pdf",
+  historyEnabled: "resume-tailor:history-enabled",
+  history: "resume-tailor:history",
 } as const;

@@ -66,6 +66,11 @@ export function getModel(id: ModelId): ModelOption {
   return model;
 }
 
+/** Label for display, tolerating IDs from saved history that are no longer offered. */
+export function getModelLabel(id: string): string {
+  return MODELS.find((m) => m.id === id)?.label ?? id;
+}
+
 export function isModelId(value: string): value is ModelId {
   return MODELS.some((m) => m.id === value);
 }

@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import type { AnalysisProvider, AnalysisRequest } from "./services/provider";
 import { validAnalysis } from "./test/fixtures";
@@ -90,6 +90,64 @@ describe("App", () => {
 
     expect(await screen.findByLabelText("Resume text")).toHaveValue(resume);
     expect(screen.getByRole("radio", { name: "Paste text" })).toBeChecked();
+  });
+
+  it("saves analyses to history only when opted in, and can reopen and delete them", async () => {
+    const user = userEvent.setup();
+    render(<App provider={fakeProvider()} />);
+    const historySection = screen.getByRole("region", { name: /Saved analyses/ });
+
+    await user.type(screen.getByLabelText("Anthropic API key"), "sk-ant-test");
+    await user.click(screen.getByRole("radio", { name: "Paste text" }));
+    await user.click(screen.getByLabelText("Resume text"));
+    await user.paste(resume);
+    await user.click(screen.getByLabelText("Job description"));
+    await user.paste(jobDescription);
+
+    // Off by default: a run leaves nothing behind.
+    await user.click(screen.getByRole("button", { name: "Analyze" }));
+    await screen.findByText(validAnalysis.summary);
+    expect(within(historySection).queryByRole("listitem")).not.toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("Save analyses on this device"));
+    await user.click(screen.getByRole("button", { name: "Analyze" }));
+    const item = await within(historySection).findByRole("listitem");
+    expect(item).toHaveTextContent("Senior TypeScript Engineer at Acme");
+    expect(item).toHaveTextContent("72");
+    expect(localStorage.getItem("resume-tailor:history")).not.toContain("Jane Doe");
+
+    await user.click(within(item).getByRole("button", { name: /View analysis/ }));
+    expect(screen.getByRole("heading", { name: "Saved analysis" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Back to current analysis" }));
+    expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
+
+    await user.click(within(item).getByRole("button", { name: /Delete analysis/ }));
+    expect(within(historySection).queryByRole("listitem")).not.toBeInTheDocument();
+  });
+
+  it("asks before turning history off, since that deletes it", async () => {
+    localStorage.setItem("resume-tailor:history-enabled", "true");
+    localStorage.setItem(
+      "resume-tailor:history",
+      JSON.stringify([
+        {
+          id: "a",
+          createdAt: "2026-10-02T10:00:00.000Z",
+          modelId: "claude-sonnet-5-5",
+          analysis: validAnalysis,
+          jobDescription: "x",
+          spend: { usage: { inputTokens: 1, outputTokens: 1 }, cost: 0.01 },
+        },
+      ]),
+    );
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const user = userEvent.setup();
+    render(<App provider={fakeProvider()} />);
+
+    await user.click(screen.getByLabelText("Save analyses on this device"));
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(screen.getByLabelText("Save analyses on this device")).toBeChecked();
+    expect(screen.getAllByRole("listitem").length).toBeGreaterThan(0);
   });
 
   it("does not store the key unless asked to", async () => {

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { getModel, type ModelId } from "../config/models";
+import { getModelLabel } from "../config/models";
 import type { Spend } from "../hooks/useAnalysis";
 import type { Analysis, Importance } from "../schemas/analysis";
 import { BulletRewrite } from "./BulletRewrite";
@@ -7,7 +7,8 @@ import { SpendNote } from "./SpendNote";
 
 interface ResultViewProps {
   readonly analysis: Analysis;
-  readonly modelId: ModelId;
+  /** A string, so saved history entries for retired models still render. */
+  readonly modelId: string;
   readonly spend: Spend;
 }
 
@@ -57,11 +58,7 @@ export function ResultView({ analysis, modelId, spend }: ResultViewProps) {
   const band = scoreBand(analysis.matchScore);
 
   return (
-    <article aria-labelledby="results-heading">
-      <h2 id="results-heading" className="sr-only">
-        Analysis results
-      </h2>
-
+    <article aria-label="Analysis results">
       <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center">
         <div className="shrink-0 text-center sm:w-36">
           <p className={`text-5xl font-bold ${band.color}`}>
@@ -90,7 +87,7 @@ export function ResultView({ analysis, modelId, spend }: ResultViewProps) {
           </p>
           <p className="mt-1 text-slate-800">{analysis.summary}</p>
           <div className="mt-2">
-            <SpendNote spend={spend} prefix={`Analyzed by ${getModel(modelId).label} for`} />
+            <SpendNote spend={spend} prefix={`Analyzed by ${getModelLabel(modelId)} for`} />
           </div>
         </div>
       </div>

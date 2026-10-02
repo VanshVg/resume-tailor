@@ -43,6 +43,18 @@ export type AnalysisState =
       readonly spend: Spend | null;
     };
 
+export interface AnalysisSuccess {
+  readonly analysis: Analysis;
+  readonly modelId: ModelId;
+  readonly spend: Spend;
+  readonly params: AnalysisParams;
+}
+
+export interface UseAnalysisOptions {
+  /** Called once per successful run (not for runs that were replaced). */
+  readonly onSuccess?: (result: AnalysisSuccess) => void;
+}
+
 export interface UseAnalysis {
   readonly state: AnalysisState;
   readonly run: (params: AnalysisParams) => void;
@@ -53,10 +65,18 @@ export interface UseAnalysis {
 
 const IDLE: AnalysisState = { status: "idle" };
 
-export function useAnalysis(provider: AnalysisProvider): UseAnalysis {
+export function useAnalysis(
+  provider: AnalysisProvider,
+  { onSuccess }: UseAnalysisOptions = {},
+): UseAnalysis {
   const [state, setState] = useState<AnalysisState>(IDLE);
   const controllerRef = useRef<AbortController | null>(null);
   const lastParamsRef = useRef<AnalysisParams | null>(null);
+  // Kept in a ref so a new callback each render doesn't restart anything.
+  const onSuccessRef = useRef(onSuccess);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
 
   const execute = useCallback(
     async (params: AnalysisParams, controller: AbortController) => {
@@ -101,6 +121,14 @@ export function useAnalysis(provider: AnalysisProvider): UseAnalysis {
               modelId: params.modelId,
               spend: total,
             });
+            if (controllerRef.current === controller) {
+              onSuccessRef.current?.({
+                analysis: parsed.data,
+                modelId: params.modelId,
+                spend: total,
+                params,
+              });
+            }
             return;
           }
 

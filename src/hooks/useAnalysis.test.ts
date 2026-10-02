@@ -103,6 +103,24 @@ describe("useAnalysis", () => {
     expect(provider.calls[0]?.model.id).toBe("claude-sonnet-5-5");
   });
 
+  it("calls onSuccess once with the result and the request params", async () => {
+    const onSuccess = vi.fn();
+    const provider = scriptedProvider(respond(validJson));
+    const { result } = renderHook(() => useAnalysis(provider, { onSuccess }));
+
+    act(() => {
+      result.current.run(params);
+    });
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("success");
+    });
+
+    expect(onSuccess).toHaveBeenCalledOnce();
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ analysis: validAnalysis, modelId: "claude-sonnet-5-5", params }),
+    );
+  });
+
   it("retries once automatically when the output is invalid, adding up the cost", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const provider = scriptedProvider(respond("not json"), respond(validJson));

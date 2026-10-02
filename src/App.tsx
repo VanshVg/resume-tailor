@@ -1,16 +1,19 @@
-import { useId, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { InputPanel } from "./components/InputPanel";
 import { ErrorBanner } from "./components/ErrorBanner";
+import { HistoryPanel } from "./components/HistoryPanel";
 import { KeyInput } from "./components/KeyInput";
 import { ModelSelect } from "./components/ModelSelect";
 import { ProgressPanel } from "./components/ProgressPanel";
 import { ResultView } from "./components/ResultView";
 import { DEFAULT_MODEL_ID, getModel, type ModelId } from "./config/models";
-import { useAnalysis } from "./hooks/useAnalysis";
+import { useAnalysis, type AnalysisSuccess } from "./hooks/useAnalysis";
 import { useApiKey } from "./hooks/useApiKey";
+import { useHistory } from "./hooks/useHistory";
 import { toResumeInput, useResume } from "./hooks/useResume";
 import { anthropicProvider } from "./services/anthropic";
 import type { AnalysisProvider } from "./services/provider";
+import { newEntryId, type HistoryEntry } from "./utils/history";
 import { checkInputs } from "./utils/validateInputs";
 
 interface AppProps {
@@ -23,7 +26,27 @@ export function App({ provider = anthropicProvider }: AppProps) {
   const [modelId, setModelId] = useState<ModelId>(DEFAULT_MODEL_ID);
   const resume = useResume();
   const [jobDescription, setJobDescription] = useState("");
-  const { state, run, retry, cancel, reset } = useAnalysis(provider);
+  const history = useHistory();
+  const { add: addToHistory } = history;
+  const saveToHistory = useCallback(
+    ({ analysis, modelId: usedModel, spend, params }: AnalysisSuccess) => {
+      addToHistory({
+        id: newEntryId(),
+        createdAt: new Date().toISOString(),
+        modelId: usedModel,
+        analysis,
+        jobDescription: params.input.jobDescription,
+        spend,
+      });
+    },
+    [addToHistory],
+  );
+  const { state, run, retry, cancel, reset } = useAnalysis(provider, {
+    onSuccess: saveToHistory,
+  });
+  /** A saved analysis being viewed instead of the current one. */
+  const [viewing, setViewing] = useState<HistoryEntry | null>(null);
+  const resultsHeadingRef = useRef<HTMLHeadingElement>(null);
   const blockersId = useId();
 
   const check = checkInputs({ apiKey: key.apiKey, resume: resume.draft, jobDescription });
@@ -33,7 +56,21 @@ export function App({ provider = anthropicProvider }: AppProps) {
   function analyze() {
     const resumeInput = toResumeInput(resume.draft);
     if (!canAnalyze || !resumeInput) return;
+    setViewing(null);
     run({ apiKey: key.apiKey.trim(), modelId, input: { resume: resumeInput, jobDescription } });
+  }
+
+  function viewSaved(entry: HistoryEntry) {
+    setViewing(entry);
+    // Move focus (and the viewport) to the results so the change is noticed.
+    requestAnimationFrame(() => {
+      resultsHeadingRef.current?.focus();
+    });
+  }
+
+  function deleteSaved(id: string) {
+    if (viewing?.id === id) setViewing(null);
+    history.remove(id);
   }
 
   return (
@@ -108,35 +145,91 @@ export function App({ provider = anthropicProvider }: AppProps) {
           </div>
         </form>
 
-        <div aria-live="polite">
-          {(state.status === "loading" || state.status === "streaming") && (
-            <ProgressPanel
-              phase={state.status}
-              attempt={state.attempt}
-              receivedChars={state.status === "streaming" ? state.partialText.length : 0}
-              modelLabel={getModel(modelId).label}
-              onCancel={cancel}
-            />
-          )}
-          {state.status === "error" && (
-            <ErrorBanner
-              kind={state.kind}
-              partialText={state.partialText}
-              spend={state.spend}
-              onRetry={retry}
-              onDismiss={reset}
-            />
-          )}
-        </div>
+        <section aria-labelledby="results-heading" className="space-y-4">
+          <h2
+            id="results-heading"
+            ref={resultsHeadingRef}
+            tabIndex={-1}
+            className="text-lg font-semibold text-slate-900 focus:outline-none"
+          >
+            {viewing ? "Saved analysis" : "Results"}
+          </h2>
 
-        {state.status === "idle" && (
-          <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-            Your match score, keyword gaps and suggested bullet rewrites will appear here.
-          </p>
-        )}
-        {state.status === "success" && (
-          <ResultView analysis={state.analysis} modelId={state.modelId} spend={state.spend} />
-        )}
+          {viewing ? (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-950">
+                <p>
+                  Viewing a saved analysis from{" "}
+                  {new Date(viewing.createdAt).toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                  .
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewing(null);
+                  }}
+                  className="btn-secondary px-2 py-1 text-xs"
+                >
+                  Back to current analysis
+                </button>
+              </div>
+              <ResultView
+                analysis={viewing.analysis}
+                modelId={viewing.modelId}
+                spend={viewing.spend}
+              />
+            </>
+          ) : (
+            <>
+              <div aria-live="polite">
+                {(state.status === "loading" || state.status === "streaming") && (
+                  <ProgressPanel
+                    phase={state.status}
+                    attempt={state.attempt}
+                    receivedChars={state.status === "streaming" ? state.partialText.length : 0}
+                    modelLabel={getModel(modelId).label}
+                    onCancel={cancel}
+                  />
+                )}
+                {state.status === "error" && (
+                  <ErrorBanner
+                    kind={state.kind}
+                    partialText={state.partialText}
+                    spend={state.spend}
+                    onRetry={retry}
+                    onDismiss={reset}
+                  />
+                )}
+              </div>
+
+              {state.status === "idle" && (
+                <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                  Your match score, keyword gaps and suggested bullet rewrites will appear here.
+                </p>
+              )}
+              {state.status === "success" && (
+                <ResultView analysis={state.analysis} modelId={state.modelId} spend={state.spend} />
+              )}
+            </>
+          )}
+        </section>
+
+        <HistoryPanel
+          enabled={history.enabled}
+          onEnabledChange={history.setEnabled}
+          entries={history.entries}
+          viewingId={viewing?.id ?? null}
+          onView={viewSaved}
+          onDelete={deleteSaved}
+          onClear={() => {
+            setViewing(null);
+            history.clear();
+          }}
+          warning={history.warning}
+        />
       </main>
 
       <footer className="mx-auto max-w-5xl px-4 pb-8 text-xs text-slate-500">
