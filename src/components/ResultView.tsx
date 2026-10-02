@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { formatCost, getModelLabel } from "../config/models";
-import { ExportButtons } from "./ExportButtons";
 import type { Spend } from "../hooks/useAnalysis";
 import type { Analysis, Importance } from "../schemas/analysis";
 import { BulletRewrite } from "./BulletRewrite";
+import { ExportButtons } from "./ExportButtons";
+import { ScoreRing } from "./ScoreRing";
 import { SpendNote } from "./SpendNote";
+import { AlertIcon, ListIcon, MailIcon, PenIcon, TargetIcon, ThumbIcon } from "./ui/icons";
 
 interface ResultViewProps {
   readonly analysis: Analysis;
@@ -13,13 +15,11 @@ interface ResultViewProps {
   readonly spend: Spend;
   /** When the analysis was made (for the export header and file name). */
   readonly createdAt: Date;
+  /** Rendered inside the cover letter section (the drafting panel). */
+  readonly coverLetter?: ReactNode;
 }
 
-function scoreBand(score: number): { label: string; color: string; bar: string } {
-  if (score >= 75) return { label: "Strong match", color: "text-good-text", bar: "bg-emerald-600" };
-  if (score >= 50) return { label: "Partial match", color: "text-mid-text", bar: "bg-amber-500" };
-  return { label: "Weak match", color: "text-danger-text", bar: "bg-red-600" };
-}
+const IMPORTANCE_ORDER: readonly Importance[] = ["high", "medium", "low"];
 
 const IMPORTANCE_STYLES: Record<Importance, string> = {
   high: "bg-bad-soft text-bad-soft-fg",
@@ -27,134 +27,230 @@ const IMPORTANCE_STYLES: Record<Importance, string> = {
   low: "bg-sunken text-fg-muted",
 };
 
+const SECTIONS = [
+  { id: "keywords", label: "Keywords" },
+  { id: "rewrites", label: "Rewrites" },
+  { id: "fit", label: "Strengths & gaps" },
+  { id: "advice", label: "Advice" },
+  { id: "cover-letter", label: "Cover letter" },
+] as const;
+
 function Section({
+  id,
+  icon,
   title,
   count,
+  description,
   children,
 }: {
+  readonly id: string;
+  readonly icon: ReactNode;
   readonly title: string;
-  readonly count: number;
+  readonly count?: number;
+  readonly description?: string;
   readonly children: ReactNode;
 }) {
   return (
-    <section className="mt-8">
-      <h3 className="text-lg font-semibold text-fg">
-        {title} <span className="text-sm font-normal text-fg-subtle">({count})</span>
-      </h3>
-      {count === 0 ? <p className="mt-2 text-sm text-fg-subtle">None.</p> : children}
+    <section id={id} aria-labelledby={`${id}-heading`} className="card scroll-mt-32 p-5">
+      <div className="flex items-start gap-3">
+        <span className="bg-sunken text-fg-muted grid size-8 shrink-0 place-items-center rounded-lg">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <h3 id={`${id}-heading`} className="text-fg font-semibold">
+            {title}
+            {count !== undefined && " "}
+            {count !== undefined && (
+              <span className="text-fg-subtle text-sm font-normal tabular-nums">({count})</span>
+            )}
+          </h3>
+          {description && <p className="text-fg-muted text-sm">{description}</p>}
+        </div>
+      </div>
+      <div className="mt-4">
+        {count === 0 ? <p className="text-fg-subtle text-sm">Nothing to show here.</p> : children}
+      </div>
     </section>
   );
 }
 
-function TextList({ items }: { readonly items: readonly string[] }) {
+function TextList({
+  items,
+  marker,
+}: {
+  readonly items: readonly string[];
+  readonly marker: string;
+}) {
   return (
-    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-fg">
+    <ul className="space-y-2">
       {items.map((item, i) => (
-        <li key={i}>{item}</li>
+        <li key={i} className="text-fg flex gap-2.5 text-sm">
+          <span aria-hidden="true" className={`mt-1.5 size-1.5 shrink-0 rounded-full ${marker}`} />
+          {item}
+        </li>
       ))}
     </ul>
   );
 }
 
-export function ResultView({ analysis, modelId, spend, createdAt }: ResultViewProps) {
-  const band = scoreBand(analysis.matchScore);
+function Stat({ value, label }: { readonly value: number; readonly label: string }) {
+  return (
+    <span className="bg-sunken text-fg-muted rounded-full px-2.5 py-1 text-xs">
+      <span className="text-fg font-semibold tabular-nums">{value}</span> {label}
+    </span>
+  );
+}
+
+export function ResultView({ analysis, modelId, spend, createdAt, coverLetter }: ResultViewProps) {
+  const keywords = [...analysis.missingKeywords].sort(
+    (a, b) => IMPORTANCE_ORDER.indexOf(a.importance) - IMPORTANCE_ORDER.indexOf(b.importance),
+  );
 
   return (
-    <article aria-label="Analysis results">
-      <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5 sm:flex-row sm:items-center">
-        <div className="shrink-0 text-center sm:w-36">
-          <p className={`text-5xl font-bold ${band.color}`}>
-            {analysis.matchScore}
-            <span className="text-xl font-medium text-fg-subtle">/100</span>
-          </p>
-          <p className={`text-sm font-medium ${band.color}`}>{band.label}</p>
-          <div
-            className="mt-2 h-2 rounded-full bg-line"
-            role="meter"
-            aria-label="Match score"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={analysis.matchScore}
-          >
-            <div
-              className={`h-2 rounded-full ${band.bar}`}
-              style={{ width: `${analysis.matchScore}%` }}
-            />
+    <article aria-label="Analysis results" className="space-y-4">
+      <div className="card p-5 sm:p-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+          <ScoreRing score={analysis.matchScore} />
+          <div className="min-w-0 flex-1">
+            <p className="eyebrow">Match for</p>
+            <p className="text-fg text-lg font-semibold">
+              {analysis.jobTitle}
+              {analysis.company && (
+                <span className="text-fg-muted font-normal"> at {analysis.company}</span>
+              )}
+            </p>
+            <p className="text-fg mt-2">{analysis.summary}</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <Stat value={analysis.strengths.length} label="strengths" />
+              <Stat value={analysis.missingKeywords.length} label="missing keywords" />
+              <Stat value={analysis.bulletRewrites.length} label="rewrites" />
+              <Stat value={analysis.gaps.length} label="gaps" />
+            </div>
           </div>
         </div>
-        <div>
-          <p className="text-sm font-medium text-fg-subtle">
-            {analysis.jobTitle}
-            {analysis.company && <> at {analysis.company}</>}
-          </p>
-          <p className="mt-1 text-fg">{analysis.summary}</p>
-          <div className="mt-2">
-            <SpendNote spend={spend} prefix={`Analyzed by ${getModelLabel(modelId)} for`} />
-          </div>
-          <div className="mt-3">
-            <ExportButtons
-              analysis={analysis}
-              meta={{
-                modelLabel: getModelLabel(modelId),
-                cost: formatCost(spend.cost),
-                date: createdAt,
-              }}
-            />
-          </div>
+        <div className="border-line mt-5 flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+          <SpendNote spend={spend} prefix={`Analyzed by ${getModelLabel(modelId)} for`} />
+          <ExportButtons
+            analysis={analysis}
+            meta={{
+              modelLabel: getModelLabel(modelId),
+              cost: formatCost(spend.cost),
+              date: createdAt,
+            }}
+          />
         </div>
       </div>
 
-      <Section title="Strengths" count={analysis.strengths.length}>
-        <TextList items={analysis.strengths} />
-      </Section>
+      <nav
+        aria-label="Result sections"
+        className="bg-page/85 sticky top-14 z-10 -mx-4 overflow-x-auto px-4 py-2 backdrop-blur"
+      >
+        <ul className="flex gap-1.5">
+          {SECTIONS.map((s) => (
+            <li key={s.id}>
+              <a
+                href={`#${s.id}`}
+                className="border-line bg-surface text-fg-muted hover:text-fg hover:border-line-strong focus-visible:outline-focus block rounded-full border px-3 py-1 text-xs font-medium whitespace-nowrap focus-visible:outline-2"
+              >
+                {s.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-      <Section title="Missing keywords" count={analysis.missingKeywords.length}>
-        <ul className="mt-2 space-y-2">
-          {analysis.missingKeywords.map((item, i) => (
-            <li key={i} className="rounded-lg border border-line bg-surface p-3 text-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium text-fg">{item.keyword}</span>
+      <Section
+        id="keywords"
+        icon={<TargetIcon />}
+        title="Missing keywords"
+        count={keywords.length}
+        description="Important terms from the posting that your resume doesn't use yet."
+      >
+        <ul className="divide-line-subtle divide-y">
+          {keywords.map((item, i) => (
+            <li
+              key={i}
+              className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0 sm:flex-row sm:gap-4"
+            >
+              <div className="flex shrink-0 items-center gap-2 sm:w-56">
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${IMPORTANCE_STYLES[item.importance]}`}
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${IMPORTANCE_STYLES[item.importance]}`}
                 >
-                  {item.importance} importance
+                  {item.importance}
+                  <span className="sr-only"> importance</span>
                 </span>
+                <span className="text-fg text-sm font-medium">{item.keyword}</span>
               </div>
-              <p className="mt-1 text-fg-muted">{item.suggestion}</p>
+              <p className="text-fg-muted text-sm">{item.suggestion}</p>
             </li>
           ))}
         </ul>
       </Section>
 
-      <Section title="Bullet rewrites" count={analysis.bulletRewrites.length}>
-        <ul className="mt-2 space-y-3">
+      <Section
+        id="rewrites"
+        icon={<PenIcon />}
+        title="Bullet rewrites"
+        count={analysis.bulletRewrites.length}
+        description="Your existing bullets, reworded for this role. No new facts added."
+      >
+        <ul className="space-y-3">
           {analysis.bulletRewrites.map((rewrite, i) => (
             <BulletRewrite key={i} rewrite={rewrite} />
           ))}
         </ul>
       </Section>
 
-      <Section title="Section advice" count={analysis.sectionAdvice.length}>
-        <dl className="mt-2 space-y-2 text-sm">
+      <div id="fit" className="grid scroll-mt-32 gap-4 md:grid-cols-2">
+        <Section
+          id="strengths"
+          icon={<ThumbIcon />}
+          title="Strengths"
+          count={analysis.strengths.length}
+          description="Already a good match."
+        >
+          <TextList items={analysis.strengths} marker="bg-emerald-500" />
+        </Section>
+        <Section
+          id="gaps"
+          icon={<AlertIcon />}
+          title="Gaps"
+          count={analysis.gaps.length}
+          description="Not shown in your resume. Only add these if you really have the experience."
+        >
+          <TextList items={analysis.gaps} marker="bg-amber-500" />
+        </Section>
+      </div>
+
+      <Section
+        id="advice"
+        icon={<ListIcon />}
+        title="Section advice"
+        count={analysis.sectionAdvice.length}
+      >
+        <dl className="divide-line-subtle divide-y">
           {analysis.sectionAdvice.map((item, i) => (
-            <div key={i} className="rounded-lg border border-line bg-surface p-3">
-              <dt className="font-medium text-fg">{item.section}</dt>
-              <dd className="mt-1 text-fg-muted">{item.advice}</dd>
+            <div
+              key={i}
+              className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0 sm:flex-row sm:gap-4"
+            >
+              <dt className="text-fg shrink-0 text-sm font-medium sm:w-40">{item.section}</dt>
+              <dd className="text-fg-muted text-sm">{item.advice}</dd>
             </div>
           ))}
         </dl>
       </Section>
 
-      <Section title="Gaps" count={analysis.gaps.length}>
-        <p className="mt-1 text-sm text-fg-muted">
-          Requirements your resume doesn&apos;t show. Only add them if you genuinely have the
-          experience.
-        </p>
-        <TextList items={analysis.gaps} />
-      </Section>
-
-      <Section title="Cover letter points" count={analysis.coverLetterPoints.length}>
-        <TextList items={analysis.coverLetterPoints} />
+      <Section id="cover-letter" icon={<MailIcon />} title="Cover letter">
+        <p className="eyebrow">Points worth emphasizing</p>
+        <div className="mt-2">
+          {analysis.coverLetterPoints.length === 0 ? (
+            <p className="text-fg-subtle text-sm">None suggested.</p>
+          ) : (
+            <TextList items={analysis.coverLetterPoints} marker="bg-accent" />
+          )}
+        </div>
+        {coverLetter && <div className="border-line mt-5 border-t pt-5">{coverLetter}</div>}
       </Section>
     </article>
   );

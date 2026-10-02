@@ -20,11 +20,11 @@ describe("toMarkdown", () => {
   it("has every section, in the on-screen order", () => {
     const headings = [...md.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
     expect(headings).toEqual([
-      "Strengths",
       "Missing keywords",
       "Bullet rewrites",
-      "Section advice",
+      "Strengths",
       "Gaps",
+      "Section advice",
       "Cover letter points",
     ]);
   });

@@ -10,6 +10,8 @@ export interface UseApiKey {
   /** True if the user asked to remember the key but storage refused. */
   readonly storageFailed: boolean;
   readonly clear: () => void;
+  /** Sets the key and the remember choice together (first-run setup). */
+  readonly connect: (value: string, remember: boolean) => void;
 }
 
 /**
@@ -54,5 +56,15 @@ export function useApiKey(): UseApiKey {
     setStorageFailed(false);
   }, []);
 
-  return { apiKey, setApiKey, remember, setRemember, storageFailed, clear };
+  const connect = useCallback(
+    (value: string, rememberValue: boolean) => {
+      setKey(value);
+      setRememberState(rememberValue);
+      if (rememberValue) persist(value);
+      else removeItem(STORAGE_KEYS.apiKey);
+    },
+    [persist],
+  );
+
+  return { apiKey, setApiKey, remember, setRemember, storageFailed, clear, connect };
 }

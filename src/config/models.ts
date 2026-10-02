@@ -10,6 +10,8 @@ export interface ModelOption {
   readonly id: string;
   readonly label: string;
   readonly description: string;
+  /** One or two words for compact UI, e.g. "Balanced". */
+  readonly tagline: string;
   readonly inputPricePerMTok: number;
   readonly outputPricePerMTok: number;
   /** Hard cap on output tokens (thinking + JSON), so a runaway response can't cost much. */
@@ -28,31 +30,34 @@ export const MODELS = [
     id: "claude-sonnet-5-5",
     label: "Claude Sonnet 5.5",
     description: "Recommended. Best balance of quality, speed and cost.",
+    tagline: "Recommended",
     inputPricePerMTok: 2,
     outputPricePerMTok: 10,
     maxTokens: 16_000,
     effort: "medium",
-    costHint: "~$0.02–0.05 per analysis",
+    costHint: "~$0.02–0.05",
   },
   {
     id: "claude-haiku-4-5",
     label: "Claude Haiku 4.5",
     description: "Quick check. Fastest and cheapest, less nuanced.",
+    tagline: "Fastest",
     inputPricePerMTok: 1,
     outputPricePerMTok: 5,
     maxTokens: 8_000,
     effort: null,
-    costHint: "~$0.01–0.02 per analysis",
+    costHint: "~$0.01–0.02",
   },
   {
     id: "claude-opus-5-5",
     label: "Claude Opus 5.5",
     description: "Deepest analysis. Slower and more expensive.",
+    tagline: "Deepest",
     inputPricePerMTok: 4,
     outputPricePerMTok: 20,
     maxTokens: 16_000,
     effort: "medium",
-    costHint: "~$0.04–0.10 per analysis",
+    costHint: "~$0.04–0.10",
   },
 ] as const satisfies readonly ModelOption[];
 

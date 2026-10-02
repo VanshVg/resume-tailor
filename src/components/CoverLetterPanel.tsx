@@ -48,19 +48,24 @@ export function CoverLetterPanel({
   }
 
   return (
-    <section aria-labelledby={`${textareaId}-heading`} className="mt-8">
-      <h3 id={`${textareaId}-heading`} className="text-fg text-lg font-semibold">
+    <div role="group" aria-labelledby={`${textareaId}-heading`}>
+      <h4 id={`${textareaId}-heading`} className="eyebrow">
         Cover letter draft
-      </h3>
+      </h4>
 
       {(state.status === "idle" || state.status === "success") && (
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <button type="button" onClick={draft} disabled={reason !== null} className="btn-primary">
+          <button
+            type="button"
+            onClick={draft}
+            disabled={reason !== null}
+            className={state.status === "success" ? "btn-secondary" : "btn-primary"}
+          >
             {state.status === "success" ? "Regenerate" : "Draft a cover letter"}
           </button>
           <p className="text-fg-muted text-sm">
             {reason ??
-              `A 250–350 word draft using only what's in your resume, written by ${getModelLabel(modelId)}. Usually costs a little less than the analysis.`}
+              `250–350 words, only facts from your resume. Uses ${getModelLabel(modelId)}.`}
           </p>
         </div>
       )}
@@ -77,7 +82,7 @@ export function CoverLetterPanel({
             onCancel={cancel}
           />
           {state.status === "streaming" && (
-            <p className="border-line bg-surface text-fg rounded-lg border p-4 text-sm whitespace-pre-wrap">
+            <p className="border-line bg-sunken text-fg rounded-xl border p-4 text-sm leading-relaxed whitespace-pre-wrap">
               {state.partialText}
             </p>
           )}
@@ -118,6 +123,6 @@ export function CoverLetterPanel({
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }

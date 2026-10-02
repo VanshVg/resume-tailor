@@ -56,11 +56,11 @@ export function toMarkdown(analysis: Analysis, meta: MarkdownMeta): string {
       `# Resume analysis: ${oneLine(jobLabel(analysis))}`,
       `**Match score: ${analysis.matchScore}/100**  \n${date} · ${meta.modelLabel} · ${meta.cost}`,
       analysis.summary.trim(),
-      section("Strengths", list(analysis.strengths)),
       section("Missing keywords", keywords),
       section("Bullet rewrites", rewrites),
-      section("Section advice", advice),
+      section("Strengths", list(analysis.strengths)),
       section("Gaps", list(analysis.gaps)),
+      section("Section advice", advice),
       section("Cover letter points", list(analysis.coverLetterPoints)),
     ].join("\n\n") + "\n"
   );

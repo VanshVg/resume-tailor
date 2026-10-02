@@ -1,5 +1,6 @@
 import { useId, useState, type DragEvent } from "react";
 import { ACCEPTED_FILE_TYPES, MAX_PDF_BYTES } from "../utils/readResumeFile";
+import { UploadIcon } from "./ui/icons";
 
 interface FileDropProps {
   readonly onFile: (file: File) => void;
@@ -29,8 +30,10 @@ export function FileDrop({ onFile, describedBy }: FileDropProps) {
         setDragging(false);
       }}
       onDrop={onDrop}
-      className={`flex min-h-48 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed p-6 text-center text-sm has-focus-visible:outline-2 has-focus-visible:outline-focus ${
-        dragging ? "border-accent bg-info-bg" : "border-line-strong bg-sunken"
+      className={`has-focus-visible:outline-focus group flex h-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition-colors has-focus-visible:outline-2 ${
+        dragging
+          ? "border-accent bg-info-bg"
+          : "border-line-strong hover:border-accent hover:bg-sunken"
       }`}
     >
       <input
@@ -46,10 +49,14 @@ export function FileDrop({ onFile, describedBy }: FileDropProps) {
           e.target.value = "";
         }}
       />
-      <span className="font-medium text-accent-fg">Choose a file</span>
-      <span className="text-fg-muted">or drag it here</span>
-      <span className="text-xs text-fg-subtle">
-        PDF up to {MAX_PDF_BYTES / 1024 / 1024} MB, or .txt / .md
+      <span className="bg-info-bg text-accent-fg grid size-11 place-items-center rounded-full">
+        <UploadIcon className="size-5" />
+      </span>
+      <span className="text-fg text-sm font-medium">
+        <span className="text-accent-fg">Choose a file</span> or drag it here
+      </span>
+      <span className="text-fg-subtle text-xs">
+        PDF (best) up to {MAX_PDF_BYTES / 1024 / 1024} MB, or .txt / .md
       </span>
     </label>
   );

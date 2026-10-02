@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Analysis } from "../schemas/analysis";
 import { markdownFileName, toMarkdown, type MarkdownMeta } from "../utils/toMarkdown";
 import { CopyButton } from "./CopyButton";
+import { DownloadIcon } from "./ui/icons";
 
 interface ExportButtonsProps {
   readonly analysis: Analysis;
@@ -30,8 +31,9 @@ export function ExportButtons({ analysis, meta }: ExportButtonsProps) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button type="button" onClick={download} className="btn-secondary px-2 py-1 text-xs">
+    <div className="flex flex-wrap items-center gap-1">
+      <button type="button" onClick={download} className="btn-ghost px-2 py-1 text-xs">
+        <DownloadIcon className="size-3.5" />
         Download .md
       </button>
       <CopyButton text={markdown} label="Copy as Markdown" idleText="Copy as Markdown" />

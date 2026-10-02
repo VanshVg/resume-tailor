@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CheckIcon, CopyIcon } from "./ui/icons";
 
 interface CopyButtonProps {
   readonly text: string;
@@ -40,8 +41,13 @@ export function CopyButton({ text, label, idleText = "Copy" }: CopyButtonProps) 
         void copy();
       }}
       aria-label={label}
-      className="btn-secondary shrink-0 px-2 py-1 text-xs"
+      className="btn-ghost shrink-0 px-2 py-1 text-xs"
     >
+      {status === "copied" ? (
+        <CheckIcon className="text-good-text size-3.5" />
+      ) : (
+        <CopyIcon className="size-3.5" />
+      )}
       <span aria-live="polite">
         {status === "copied" ? "Copied!" : status === "failed" ? "Copy failed" : idleText}
       </span>

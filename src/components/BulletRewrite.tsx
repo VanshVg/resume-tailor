@@ -1,28 +1,28 @@
 import type { BulletRewrite as BulletRewriteData } from "../schemas/analysis";
 import { CopyButton } from "./CopyButton";
+import { ArrowRightIcon } from "./ui/icons";
 
-interface BulletRewriteProps {
-  readonly rewrite: BulletRewriteData;
-}
-
-export function BulletRewrite({ rewrite }: BulletRewriteProps) {
+export function BulletRewrite({ rewrite }: { readonly rewrite: BulletRewriteData }) {
   return (
-    <li className="rounded-lg border border-line bg-surface p-3">
-      <div className="grid gap-3 md:grid-cols-2">
-        <div>
-          <p className="text-xs font-semibold tracking-wide text-fg-subtle uppercase">Original</p>
-          <p className="mt-1 text-sm whitespace-pre-wrap text-fg-muted">{rewrite.original}</p>
+    <li className="border-line rounded-xl border">
+      <div className="grid md:grid-cols-[1fr_auto_1fr]">
+        <div className="p-3.5">
+          <p className="eyebrow">Original</p>
+          <p className="text-fg-muted mt-1 text-sm whitespace-pre-wrap">{rewrite.original}</p>
         </div>
-        <div>
+        <div className="text-fg-subtle hidden items-center md:flex" aria-hidden="true">
+          <ArrowRightIcon />
+        </div>
+        <div className="bg-good-soft/40 border-line border-t p-3.5 md:rounded-r-xl md:border-t-0 md:border-l">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold tracking-wide text-good-text uppercase">Improved</p>
+            <p className="eyebrow text-good-text">Improved</p>
             <CopyButton text={rewrite.improved} label="Copy improved bullet" />
           </div>
-          <p className="mt-1 text-sm whitespace-pre-wrap text-fg">{rewrite.improved}</p>
+          <p className="text-fg mt-1 text-sm whitespace-pre-wrap">{rewrite.improved}</p>
         </div>
       </div>
-      <p className="mt-2 border-t border-line-subtle pt-2 text-sm text-fg-muted">
-        <span className="font-medium">Why: </span>
+      <p className="border-line text-fg-muted border-t px-3.5 py-2.5 text-xs">
+        <span className="text-fg font-medium">Why: </span>
         {rewrite.reason}
       </p>
     </li>

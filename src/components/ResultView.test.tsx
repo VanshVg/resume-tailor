@@ -33,7 +33,8 @@ describe("ResultView", () => {
         createdAt={date}
       />,
     );
-    expect(screen.getByText("Senior TypeScript Engineer at Acme")).toBeInTheDocument();
+    expect(screen.getByText("Senior TypeScript Engineer")).toBeInTheDocument();
+    expect(screen.getByText("at Acme", { exact: false })).toBeInTheDocument();
   });
 
   it("shows the actual cost and model", () => {
@@ -45,11 +46,15 @@ describe("ResultView", () => {
         createdAt={date}
       />,
     );
-    expect(screen.getByText(/Analyzed by Claude Sonnet 5.5 for \$0.029/)).toBeInTheDocument();
-    expect(screen.getByText(/3,012 input \+ 2,345 output tokens/)).toBeInTheDocument();
+    const note = screen.getByText(
+      (_, el) => el?.tagName === "P" && /^Analyzed by/.test(el.textContent),
+    );
+    expect(note).toHaveTextContent(
+      "Analyzed by Claude Sonnet 5.5 for $0.029 (3,012 in · 2,345 out)",
+    );
   });
 
-  it("renders sections in the specified order", () => {
+  it("renders sections with the most actionable first", () => {
     render(
       <ResultView
         analysis={validAnalysis}
@@ -60,12 +65,12 @@ describe("ResultView", () => {
     );
     const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
     expect(headings).toEqual([
-      "Strengths (1)",
       "Missing keywords (1)",
       "Bullet rewrites (1)",
-      "Section advice (1)",
+      "Strengths (1)",
       "Gaps (1)",
-      "Cover letter points (1)",
+      "Section advice (1)",
+      "Cover letter",
     ]);
   });
 
@@ -160,6 +165,6 @@ describe("ResultView", () => {
       />,
     );
     expect(screen.getByRole("heading", { name: "Gaps (0)" })).toBeInTheDocument();
-    expect(screen.getByText("None.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing to show here.")).toBeInTheDocument();
   });
 });

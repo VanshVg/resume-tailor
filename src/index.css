@@ -11,6 +11,8 @@
   --color-page: var(--color-slate-50);
   --color-surface: var(--color-white);
   --color-sunken: var(--color-slate-100);
+  /** Selected segment / raised chip: stands out from \`sunken\` in both themes. */
+  --color-raised: var(--color-white);
   --color-line: var(--color-slate-200);
   --color-line-subtle: var(--color-slate-100);
   --color-line-strong: var(--color-slate-300);
@@ -58,6 +60,7 @@
   --color-page: var(--color-slate-950);
   --color-surface: var(--color-slate-900);
   --color-sunken: var(--color-slate-800);
+  --color-raised: var(--color-slate-600);
   --color-line: var(--color-slate-800);
   --color-line-subtle: var(--color-slate-800);
   --color-line-strong: var(--color-slate-600);
@@ -105,16 +108,52 @@
 }
 
 @layer components {
+  .card {
+    @apply border-line bg-surface rounded-2xl border shadow-sm;
+  }
   .input {
-    @apply border-line-strong bg-surface text-fg placeholder:text-fg-placeholder focus-visible:border-focus focus-visible:outline-focus aria-invalid:border-danger-input rounded-lg border px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-0;
+    @apply border-line-strong bg-surface text-fg placeholder:text-fg-placeholder focus-visible:border-focus focus-visible:outline-focus aria-invalid:border-danger-input rounded-lg border px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-0;
   }
   .btn-primary {
-    @apply bg-accent text-on-accent hover:bg-accent-hover focus-visible:outline-focus disabled:bg-disabled disabled:text-disabled-fg inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed;
+    @apply bg-accent text-on-accent hover:bg-accent-hover focus-visible:outline-focus disabled:bg-disabled disabled:text-disabled-fg inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:shadow-none;
   }
   .btn-secondary {
-    @apply border-line-strong bg-surface text-fg hover:bg-sunken focus-visible:outline-focus inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply border-line-strong bg-surface text-fg hover:bg-sunken focus-visible:outline-focus inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply text-fg-muted hover:bg-sunken hover:text-fg focus-visible:outline-focus inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-icon {
+    @apply text-fg-muted hover:bg-sunken hover:text-fg focus-visible:outline-focus inline-flex size-8 items-center justify-center rounded-lg transition-colors focus-visible:outline-2;
   }
   .link {
     @apply text-accent-fg hover:text-accent-fg-hover focus-visible:outline-focus font-medium underline underline-offset-2 focus-visible:outline-2;
+  }
+  .eyebrow {
+    @apply text-fg-subtle text-xs font-semibold tracking-wide uppercase;
+  }
+}
+
+/* Native <dialog>: fade in, and slide the drawer from the right. */
+dialog[open] {
+  animation: dialog-in 160ms ease-out;
+}
+dialog[open].ml-auto {
+  animation-name: drawer-in;
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog[open] {
+    animation: none;
   }
 }

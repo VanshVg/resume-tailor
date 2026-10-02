@@ -1,13 +1,16 @@
-import { useCallback, useId, useRef, useState } from "react";
-import { InputPanel } from "./components/InputPanel";
+import { useCallback, useRef, useState } from "react";
+import { ActionBar } from "./components/ActionBar";
 import { CoverLetterPanel } from "./components/CoverLetterPanel";
+import { EmptyState } from "./components/EmptyState";
 import { ErrorBanner } from "./components/ErrorBanner";
-import { HistoryPanel } from "./components/HistoryPanel";
-import { KeyInput } from "./components/KeyInput";
-import { ModelSelect } from "./components/ModelSelect";
-import { ProgressPanel } from "./components/ProgressPanel";
+import { HistoryDrawer } from "./components/HistoryDrawer";
+import { JobCard } from "./components/JobCard";
+import { KeySetup } from "./components/KeySetup";
+import { ProgressPanel, ResultsSkeleton } from "./components/ProgressPanel";
+import { ResumeCard } from "./components/ResumeCard";
 import { ResultView } from "./components/ResultView";
-import { ThemeSwitch } from "./components/ThemeSwitch";
+import { SettingsDialog } from "./components/SettingsDialog";
+import { TopBar } from "./components/TopBar";
 import { DEFAULT_MODEL_ID, getModel, isModelId, type ModelId } from "./config/models";
 import { useAnalysis, type AnalysisSuccess } from "./hooks/useAnalysis";
 import { useApiKey } from "./hooks/useApiKey";
@@ -24,6 +27,9 @@ interface AppProps {
   readonly provider?: AnalysisProvider;
 }
 
+const dateTime = (date: Date) =>
+  date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+
 export function App({ provider = anthropicProvider }: AppProps) {
   const [theme, setTheme] = useTheme();
   const key = useApiKey();
@@ -31,6 +37,9 @@ export function App({ provider = anthropicProvider }: AppProps) {
   const resume = useResume();
   const [jobDescription, setJobDescription] = useState("");
   const history = useHistory();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   const { add: addToHistory } = history;
   const saveToHistory = useCallback(
     ({ analysis, modelId: usedModel, spend, params, completedAt }: AnalysisSuccess) => {
@@ -50,26 +59,31 @@ export function App({ provider = anthropicProvider }: AppProps) {
   });
   /** A saved analysis being viewed instead of the current one. */
   const [viewing, setViewing] = useState<HistoryEntry | null>(null);
-  const resultsHeadingRef = useRef<HTMLHeadingElement>(null);
-  const blockersId = useId();
+  const resultsRef = useRef<HTMLHeadingElement>(null);
 
   const currentResume = toResumeInput(resume.draft);
   const check = checkInputs({ apiKey: key.apiKey, resume: resume.draft, jobDescription });
   const busy = state.status === "loading" || state.status === "streaming";
-  const canAnalyze = check.blockers.length === 0 && !busy;
+  const hasKey = key.apiKey.trim() !== "";
+
+  function focusResults() {
+    // Move focus (and the viewport) to the results so the change is noticed.
+    requestAnimationFrame(() => {
+      resultsRef.current?.focus();
+    });
+  }
 
   function analyze() {
-    if (!canAnalyze || !currentResume) return;
+    if (check.blockers.length > 0 || busy || !currentResume) return;
     setViewing(null);
     run({ apiKey: key.apiKey.trim(), modelId, input: { resume: currentResume, jobDescription } });
+    focusResults();
   }
 
   function viewSaved(entry: HistoryEntry) {
     setViewing(entry);
-    // Move focus (and the viewport) to the results so the change is noticed.
-    requestAnimationFrame(() => {
-      resultsHeadingRef.current?.focus();
-    });
+    setHistoryOpen(false);
+    focusResults();
   }
 
   function deleteSaved(id: string) {
@@ -77,108 +91,84 @@ export function App({ provider = anthropicProvider }: AppProps) {
     history.remove(id);
   }
 
+  const showResultsHeading = viewing !== null || state.status !== "idle";
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto max-w-5xl px-4 py-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-fg text-2xl font-bold">Resume Tailor</h1>
-            <ThemeSwitch value={theme} onChange={setTheme} />
-          </div>
-          <p className="mt-1 text-fg-muted">
-            Paste your resume and a job description to get specific, honest suggestions for
-            tailoring your resume to the role. Nothing is invented: only rewording, reordering and
-            reframing of what&apos;s already there.
+    <div className="flex min-h-screen flex-col">
+      <TopBar
+        theme={theme}
+        onThemeChange={setTheme}
+        keyConnected={hasKey}
+        onOpenSettings={() => {
+          setSettingsOpen(true);
+        }}
+        savedCount={history.enabled ? history.entries.length : null}
+        onOpenHistory={() => {
+          setHistoryOpen(true);
+        }}
+      />
+
+      <main className="mx-auto w-full max-w-5xl flex-1 space-y-8 px-4 py-8">
+        <div className="max-w-2xl">
+          <h1 className="text-fg text-2xl font-bold tracking-tight sm:text-3xl">
+            Tailor your resume to the job
+          </h1>
+          <p className="text-fg-muted mt-2">
+            Get an honest match score, missing keywords and rewritten bullets for a specific job.
+            Nothing is invented: only rewording and reframing of what&apos;s already on your resume.
           </p>
         </div>
-      </header>
 
-      <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
+        {!hasKey && <KeySetup onSave={key.connect} />}
+
         <form
-          className="space-y-6"
           aria-label="Analysis inputs"
+          className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
             analyze();
           }}
         >
-          <section className="grid grid-cols-1 gap-6 rounded-xl border border-line bg-surface p-5 md:grid-cols-2 [&>*]:min-w-0">
-            <KeyInput
-              apiKey={key.apiKey}
-              onApiKeyChange={key.setApiKey}
-              remember={key.remember}
-              onRememberChange={key.setRemember}
-              onClear={key.clear}
-              storageFailed={key.storageFailed}
-              status={check.apiKey}
+          <div className="grid gap-4 md:grid-cols-2">
+            <ResumeCard resume={resume} textStatus={check.resume} />
+            <JobCard
+              value={jobDescription}
+              onChange={setJobDescription}
+              status={check.jobDescription}
             />
-            <ModelSelect value={modelId} onChange={setModelId} />
-          </section>
-
-          <section className="rounded-xl border border-line bg-surface p-5">
-            <InputPanel
-              resume={resume.draft}
-              onResumeModeChange={resume.setMode}
-              onResumeTextChange={resume.setText}
-              onResumePdfChange={resume.setPdf}
-              rememberResume={resume.remember}
-              onRememberResumeChange={resume.setRemember}
-              resumeSaveWarning={resume.saveWarning}
-              onClearResume={resume.clear}
-              resumeStatus={check.resume}
-              jobDescription={jobDescription}
-              onJobDescriptionChange={setJobDescription}
-              jobDescriptionStatus={check.jobDescription}
-              sizeStatus={check.size}
-            />
-          </section>
-
-          <div className="flex flex-wrap items-center gap-4">
-            <button
-              type="submit"
-              disabled={!canAnalyze}
-              aria-describedby={check.blockers.length > 0 ? blockersId : undefined}
-              className="btn-primary px-6 py-3 text-base"
-            >
-              Analyze
-            </button>
-            {check.blockers.length > 0 && !busy && (
-              <ul id={blockersId} className="text-sm text-fg-muted">
-                {check.blockers.map((b) => (
-                  <li key={b}>{b}</li>
-                ))}
-              </ul>
-            )}
           </div>
+          <ActionBar
+            modelId={modelId}
+            onModelChange={setModelId}
+            blocker={check.blockers[0] ?? null}
+            busy={busy}
+            sizeWarning={check.size}
+            hasPdf={resume.draft.mode === "file" && resume.draft.pdf !== null}
+          />
         </form>
 
         <section aria-labelledby="results-heading" className="space-y-4">
           <h2
             id="results-heading"
-            ref={resultsHeadingRef}
+            ref={resultsRef}
             tabIndex={-1}
-            className="text-lg font-semibold text-fg focus:outline-none"
+            className={
+              showResultsHeading ? "text-fg text-lg font-semibold focus:outline-none" : "sr-only"
+            }
           >
             {viewing ? "Saved analysis" : "Results"}
           </h2>
 
           {viewing ? (
             <>
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-info-line bg-info-bg p-3 text-sm text-info-fg">
-                <p>
-                  Viewing a saved analysis from{" "}
-                  {new Date(viewing.createdAt).toLocaleString(undefined, {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                  .
-                </p>
+              <div className="border-info-line bg-info-bg text-info-fg flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm">
+                <p>Viewing a saved analysis from {dateTime(new Date(viewing.createdAt))}.</p>
                 <button
                   type="button"
                   onClick={() => {
                     setViewing(null);
                   }}
-                  className="btn-secondary px-2 py-1 text-xs"
+                  className="btn-secondary px-2.5 py-1 text-xs"
                 >
                   Back to current analysis
                 </button>
@@ -188,39 +178,41 @@ export function App({ provider = anthropicProvider }: AppProps) {
                 modelId={viewing.modelId}
                 spend={viewing.spend}
                 createdAt={new Date(viewing.createdAt)}
-              />
-              <CoverLetterPanel
-                key={`saved-${viewing.id}`}
-                provider={provider}
-                apiKey={key.apiKey}
-                modelId={isModelId(viewing.modelId) ? viewing.modelId : modelId}
-                input={
-                  currentResume
-                    ? {
-                        resume: currentResume,
-                        jobDescription: viewing.jobDescription,
-                        analysis: viewing.analysis,
-                      }
-                    : null
+                coverLetter={
+                  <CoverLetterPanel
+                    key={`saved-${viewing.id}`}
+                    provider={provider}
+                    apiKey={key.apiKey}
+                    modelId={isModelId(viewing.modelId) ? viewing.modelId : modelId}
+                    input={
+                      currentResume
+                        ? {
+                            resume: currentResume,
+                            jobDescription: viewing.jobDescription,
+                            analysis: viewing.analysis,
+                          }
+                        : null
+                    }
+                    unavailableReason="Saved analyses don't store your resume. Add it above (or turn on “Remember on this device”) to draft a cover letter."
+                    note="Uses the resume currently in the resume card."
+                  />
                 }
-                unavailableReason="Saved analyses don't store your resume. Add it above (or turn on “Remember my resume”) to draft a cover letter."
-                note="Uses the resume currently in the resume field."
               />
             </>
           ) : (
             <>
               <div aria-live="polite">
-                {(state.status === "loading" || state.status === "streaming") && (
+                {busy && (
                   <ProgressPanel
                     message={
-                      state.status === "loading"
-                        ? `${getModel(modelId).label} is reading your resume and thinking…`
-                        : `Writing suggestions… ${state.partialText.length.toLocaleString("en-US")} characters received`
+                      state.status === "streaming"
+                        ? `Writing suggestions… ${state.partialText.length.toLocaleString("en-US")} characters received`
+                        : `${getModel(modelId).label} is reading your resume and thinking…`
                     }
                     detail={
                       state.attempt > 1
                         ? "The first response wasn't in the expected format, so this is an automatic retry."
-                        : undefined
+                        : "This usually takes 20–60 seconds."
                     }
                     onCancel={cancel}
                   />
@@ -236,56 +228,74 @@ export function App({ provider = anthropicProvider }: AppProps) {
                 )}
               </div>
 
-              {state.status === "idle" && (
-                <p className="rounded-xl border border-dashed border-line-strong p-6 text-center text-sm text-fg-subtle">
-                  Your match score, keyword gaps and suggested bullet rewrites will appear here.
-                </p>
-              )}
+              {busy && <ResultsSkeleton />}
+              {state.status === "idle" && <EmptyState />}
               {state.status === "success" && (
-                <>
-                  <ResultView
-                    analysis={state.analysis}
-                    modelId={state.modelId}
-                    spend={state.spend}
-                    createdAt={state.completedAt}
-                  />
-                  <CoverLetterPanel
-                    key={`run-${state.runId}`}
-                    provider={provider}
-                    apiKey={key.apiKey}
-                    modelId={state.modelId}
-                    input={{
-                      resume: state.input.resume,
-                      jobDescription: state.input.jobDescription,
-                      analysis: state.analysis,
-                    }}
-                    unavailableReason=""
-                  />
-                </>
+                <ResultView
+                  analysis={state.analysis}
+                  modelId={state.modelId}
+                  spend={state.spend}
+                  createdAt={state.completedAt}
+                  coverLetter={
+                    <CoverLetterPanel
+                      key={`run-${state.runId}`}
+                      provider={provider}
+                      apiKey={key.apiKey}
+                      modelId={state.modelId}
+                      input={{
+                        resume: state.input.resume,
+                        jobDescription: state.input.jobDescription,
+                        analysis: state.analysis,
+                      }}
+                      unavailableReason=""
+                    />
+                  }
+                />
               )}
             </>
           )}
         </section>
-
-        <HistoryPanel
-          enabled={history.enabled}
-          onEnabledChange={history.setEnabled}
-          entries={history.entries}
-          viewingId={viewing?.id ?? null}
-          onView={viewSaved}
-          onDelete={deleteSaved}
-          onClear={() => {
-            setViewing(null);
-            history.clear();
-          }}
-          warning={history.warning}
-        />
       </main>
 
-      <footer className="mx-auto max-w-5xl px-4 pb-8 text-xs text-fg-subtle">
-        No analytics, no tracking, no server. Your resume and key go only to Anthropic&apos;s API,
-        directly from your browser.
+      <footer className="border-line border-t">
+        <div className="text-fg-subtle mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-5 text-xs">
+          <p>No server, no analytics, no tracking. Runs entirely in your browser.</p>
+          <a
+            href="https://github.com/VanshVg/resume-tailor"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-fg underline-offset-2 hover:underline"
+          >
+            Source on GitHub
+          </a>
+        </div>
       </footer>
+
+      <SettingsDialog
+        open={settingsOpen}
+        onClose={() => {
+          setSettingsOpen(false);
+        }}
+        apiKey={key}
+        keyStatus={check.apiKey}
+      />
+      <HistoryDrawer
+        open={historyOpen}
+        onClose={() => {
+          setHistoryOpen(false);
+        }}
+        enabled={history.enabled}
+        onEnabledChange={history.setEnabled}
+        entries={history.entries}
+        viewingId={viewing?.id ?? null}
+        onView={viewSaved}
+        onDelete={deleteSaved}
+        onClear={() => {
+          setViewing(null);
+          history.clear();
+        }}
+        warning={history.warning}
+      />
     </div>
   );
 }

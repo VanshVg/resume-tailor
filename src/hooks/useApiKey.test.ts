@@ -50,4 +50,14 @@ describe("useApiKey", () => {
     expect(result.current.apiKey).toBe("");
     expect(localStorage.getItem(STORAGE_KEYS.apiKey)).toBeNull();
   });
+
+  it("connect sets the key and remember choice in one step", () => {
+    const { result } = renderHook(() => useApiKey());
+    act(() => {
+      result.current.connect("sk-ant-new", true);
+    });
+    expect(result.current.apiKey).toBe("sk-ant-new");
+    expect(result.current.remember).toBe(true);
+    expect(localStorage.getItem(STORAGE_KEYS.apiKey)).toBe("sk-ant-new");
+  });
 });
