@@ -25,6 +25,10 @@ describe("AnalysisSchema", () => {
     expect(AnalysisSchema.safeParse({ ...validAnalysis, matchScore }).success).toBe(false);
   });
 
+  it("accepts a null company when the job description doesn't name one", () => {
+    expect(AnalysisSchema.safeParse({ ...validAnalysis, company: null }).success).toBe(true);
+  });
+
   it("rejects an unknown importance level", () => {
     const result = AnalysisSchema.safeParse({
       ...validAnalysis,

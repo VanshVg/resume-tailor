@@ -102,6 +102,8 @@ Ask the model to return **only JSON** matching this schema. Define it once as a 
 ```ts
 // Conceptual shape. Implement as a Zod schema in src/schemas/analysis.ts
 type Analysis = {
+  jobTitle: string;              // from the JD, used to label history entries
+  company: string | null;        // from the JD; null if not stated
   matchScore: number;            // 0-100, honest overall fit
   summary: string;               // 2-3 sentences: overall fit and the biggest opportunity
   strengths: string[];           // things in the resume that already match well
@@ -124,7 +126,7 @@ type Analysis = {
 };
 ```
 
-Rendering: show the match score prominently, then the sections in the order above. Show `original` and `improved` bullets side by side, with a copy button on `improved`.
+Rendering: show the job title/company and match score prominently, then the sections in the order above. Show `original` and `improved` bullets side by side, with a copy button on `improved`.
 
 ## 7. Prompt design
 

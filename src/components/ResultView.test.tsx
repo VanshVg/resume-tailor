@@ -16,6 +16,11 @@ describe("ResultView", () => {
     expect(screen.getByText("Partial match")).toBeInTheDocument();
   });
 
+  it("shows the job title and company", () => {
+    render(<ResultView analysis={validAnalysis} modelId="claude-sonnet-5-5" spend={spend} />);
+    expect(screen.getByText("Senior TypeScript Engineer at Acme")).toBeInTheDocument();
+  });
+
   it("shows the actual cost and model", () => {
     render(<ResultView analysis={validAnalysis} modelId="claude-sonnet-5-5" spend={spend} />);
     expect(screen.getByText(/Analyzed by Claude Sonnet 5.5 for \$0.029/)).toBeInTheDocument();

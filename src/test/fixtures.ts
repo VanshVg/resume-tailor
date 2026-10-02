@@ -1,6 +1,8 @@
 import type { Analysis } from "../schemas/analysis";
 
 export const validAnalysis: Analysis = {
+  jobTitle: "Senior TypeScript Engineer",
+  company: "Acme",
   matchScore: 72,
   summary: "Solid TypeScript background. Biggest opportunity: surface the React work.",
   strengths: ["5 years of TypeScript"],

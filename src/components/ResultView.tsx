@@ -84,7 +84,11 @@ export function ResultView({ analysis, modelId, spend }: ResultViewProps) {
           </div>
         </div>
         <div>
-          <p className="text-slate-800">{analysis.summary}</p>
+          <p className="text-sm font-medium text-slate-500">
+            {analysis.jobTitle}
+            {analysis.company && <> at {analysis.company}</>}
+          </p>
+          <p className="mt-1 text-slate-800">{analysis.summary}</p>
           <div className="mt-2">
             <SpendNote spend={spend} prefix={`Analyzed by ${getModel(modelId).label} for`} />
           </div>

@@ -10,6 +10,13 @@ import { z } from "zod";
  * them.
  */
 export const AnalysisSchema = z.object({
+  jobTitle: z
+    .string()
+    .describe('The job title from the job description, e.g. "Senior TypeScript Engineer".'),
+  company: z
+    .string()
+    .nullable()
+    .describe("The hiring company's name if the job description states it, otherwise null."),
   matchScore: z
     .number()
     .int()
