@@ -64,3 +64,14 @@ export class AnalysisError extends Error {
     this.usage = usage;
   }
 }
+
+/**
+ * Last-resort conversion for anything a provider throws that isn't already an
+ * AnalysisError. Providers should map their own errors; this only guarantees
+ * the hook always has a kind to show.
+ */
+export function asAnalysisError(error: unknown, signal: AbortSignal): AnalysisError {
+  if (error instanceof AnalysisError) return error;
+  if (signal.aborted) return new AnalysisError("cancelled", "Request cancelled by the user");
+  return new AnalysisError("unknown", error instanceof Error ? error.name : "Unknown error");
+}

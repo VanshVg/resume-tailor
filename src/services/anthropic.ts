@@ -1,5 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import type Anthropic from "@anthropic-ai/sdk";
 import type { TokenUsage } from "../config/models";
 import { buildUserMessage, SYSTEM_PROMPT } from "../prompts/analyze";
 import { AnalysisSchema } from "../schemas/analysis";
@@ -10,35 +9,52 @@ import {
   type AnalysisResponse,
 } from "./provider";
 
-/**
- * Structured-output format generated from the Zod schema. We pass the bare
- * JSON Schema rather than the SDK's auto-parsing wrapper so validation
- * happens in one place (parseJson), with our own retry logic.
- */
-const OUTPUT_FORMAT: Anthropic.JSONOutputFormat = {
-  type: "json_schema",
-  schema: zodOutputFormat(AnalysisSchema).schema,
-};
+type Sdk = typeof import("@anthropic-ai/sdk");
 
 const REQUEST_TIMEOUT_MS = 180_000;
+
+/**
+ * The SDK (plus Zod's JSON Schema converter) is most of the bundle, so it is
+ * loaded on the first analysis rather than on page load.
+ */
+async function loadSdk(): Promise<{
+  Anthropic: Sdk["default"];
+  format: Anthropic.JSONOutputFormat;
+}> {
+  const [sdk, { zodOutputFormat }] = await Promise.all([
+    import("@anthropic-ai/sdk"),
+    import("@anthropic-ai/sdk/helpers/zod"),
+  ]);
+  return {
+    Anthropic: sdk.default,
+    // Structured-output format generated from the Zod schema. We pass the bare
+    // JSON Schema rather than the SDK's auto-parsing wrapper so validation
+    // happens in one place (parseJson), with our own retry logic.
+    format: { type: "json_schema", schema: zodOutputFormat(AnalysisSchema).schema },
+  };
+}
 
 function toUsage(usage: Anthropic.Usage): TokenUsage {
   return { inputTokens: usage.input_tokens, outputTokens: usage.output_tokens };
 }
 
 /** Maps anything thrown by the SDK to an AnalysisError the UI can explain. */
-export function toAnalysisError(error: unknown, signal?: AbortSignal): AnalysisError {
+export function toAnalysisError(
+  sdk: Sdk["default"],
+  error: unknown,
+  signal?: AbortSignal,
+): AnalysisError {
   if (error instanceof AnalysisError) return error;
-  if (signal?.aborted || error instanceof Anthropic.APIUserAbortError) {
+  if (signal?.aborted || error instanceof sdk.APIUserAbortError) {
     return new AnalysisError("cancelled", "Request cancelled by the user");
   }
-  if (error instanceof Anthropic.APIConnectionTimeoutError) {
+  if (error instanceof sdk.APIConnectionTimeoutError) {
     return new AnalysisError("timeout", "Request timed out");
   }
-  if (error instanceof Anthropic.APIConnectionError) {
+  if (error instanceof sdk.APIConnectionError) {
     return new AnalysisError("network", "Network error");
   }
-  if (error instanceof Anthropic.APIError) {
+  if (error instanceof sdk.APIError) {
     const detail = `HTTP ${error.status ?? "?"} (${error.type ?? "no type"})`;
     switch (error.status) {
       case 400:
@@ -79,9 +95,17 @@ export const anthropicProvider: AnalysisProvider = {
     signal,
     onText,
   }: AnalysisRequest): Promise<AnalysisResponse> {
+    let sdk: Awaited<ReturnType<typeof loadSdk>>;
+    try {
+      sdk = await loadSdk();
+    } catch {
+      // A failed chunk download (offline, or a stale tab after a deploy).
+      throw new AnalysisError("network", "Failed to load the Anthropic SDK");
+    }
+
     // Safe in a browser here: the key is the user's own, typed into this page,
     // and is sent only to api.anthropic.com.
-    const client = new Anthropic({
+    const client = new sdk.Anthropic({
       apiKey,
       dangerouslyAllowBrowser: true,
       maxRetries: 1,
@@ -97,7 +121,7 @@ export const anthropicProvider: AnalysisProvider = {
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: buildUserMessage(input) }],
           output_config: {
-            format: OUTPUT_FORMAT,
+            format: sdk.format,
             ...(model.effort === null ? {} : { effort: model.effort }),
           },
         },
@@ -106,7 +130,7 @@ export const anthropicProvider: AnalysisProvider = {
       stream.on("text", onText);
       message = await stream.finalMessage();
     } catch (error) {
-      throw toAnalysisError(error, signal);
+      throw toAnalysisError(sdk.Anthropic, error, signal);
     }
 
     const usage = toUsage(message.usage);

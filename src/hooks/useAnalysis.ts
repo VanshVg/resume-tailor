@@ -2,8 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { addUsage, calculateCost, getModel, type ModelId, type TokenUsage } from "../config/models";
 import type { AnalyzeInput } from "../prompts/analyze";
 import { AnalysisSchema, type Analysis } from "../schemas/analysis";
-import { toAnalysisError } from "../services/anthropic";
-import { AnalysisError, type AnalysisErrorKind, type AnalysisProvider } from "../services/provider";
+import {
+  asAnalysisError,
+  type AnalysisErrorKind,
+  type AnalysisProvider,
+} from "../services/provider";
 import { parseJson } from "../utils/parseJson";
 
 /** Attempts per run: one automatic retry if the output fails validation. */
@@ -110,7 +113,7 @@ export function useAnalysis(provider: AnalysisProvider): UseAnalysis {
             return;
           }
         } catch (thrown) {
-          const error: AnalysisError = toAnalysisError(thrown, signal);
+          const error = asAnalysisError(thrown, signal);
           addSpend(error.usage);
           if (error.kind !== "cancelled") {
             console.warn(`Analysis failed: ${error.kind} (${error.message})`);

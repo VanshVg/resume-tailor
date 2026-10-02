@@ -19,36 +19,41 @@ describe("toAnalysisError", () => {
     [500, "overloaded"],
     [529, "overloaded"],
   ] as const)("maps HTTP %i to %s", (status, kind) => {
-    expect(toAnalysisError(apiError(status)).kind).toBe(kind);
+    expect(toAnalysisError(Anthropic, apiError(status)).kind).toBe(kind);
   });
 
   it("maps user aborts to cancelled", () => {
-    expect(toAnalysisError(new Anthropic.APIUserAbortError()).kind).toBe("cancelled");
+    expect(toAnalysisError(Anthropic, new Anthropic.APIUserAbortError()).kind).toBe("cancelled");
   });
 
   it("treats anything thrown after the signal aborted as cancelled", () => {
     const controller = new AbortController();
     controller.abort();
-    expect(toAnalysisError(new Error("boom"), controller.signal).kind).toBe("cancelled");
+    expect(toAnalysisError(Anthropic, new Error("boom"), controller.signal).kind).toBe("cancelled");
   });
 
   it("maps timeouts and connection failures", () => {
-    expect(toAnalysisError(new Anthropic.APIConnectionTimeoutError()).kind).toBe("timeout");
-    expect(toAnalysisError(new Anthropic.APIConnectionError({})).kind).toBe("network");
+    expect(toAnalysisError(Anthropic, new Anthropic.APIConnectionTimeoutError()).kind).toBe(
+      "timeout",
+    );
+    expect(toAnalysisError(Anthropic, new Anthropic.APIConnectionError({})).kind).toBe("network");
   });
 
   it("maps a stream that breaks off partway to network", () => {
-    expect(toAnalysisError(new Anthropic.AnthropicError("stream ended")).kind).toBe("network");
+    expect(toAnalysisError(Anthropic, new Anthropic.AnthropicError("stream ended")).kind).toBe(
+      "network",
+    );
   });
 
   it("passes AnalysisErrors through unchanged", () => {
     const original = new AnalysisError("refusal", "x");
-    expect(toAnalysisError(original)).toBe(original);
+    expect(toAnalysisError(Anthropic, original)).toBe(original);
   });
 
   it("never includes the API key in the error message", () => {
     const key = "sk-ant-api03-secret";
     const error = toAnalysisError(
+      Anthropic,
       Anthropic.APIError.generate(401, { message: `bad key ${key}` }, `bad key ${key}`, undefined),
     );
     expect(error.message).not.toContain(key);
